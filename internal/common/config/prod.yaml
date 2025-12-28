@@ -1,0 +1,13 @@
+env: prod
+location: "Europe/Moscow"
+shutdown_timeout_duration: "10s"
+
+postgres:
+  host: localhost
+  port: 5432
+  username: admin
+  password: 1111
+  database: success_bot
+
+bot:
+  api_key: test_api_key
