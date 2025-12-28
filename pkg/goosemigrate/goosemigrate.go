@@ -10,22 +10,28 @@ import (
 type Migrator struct {
 	postgresURL    string
 	migrationsPath string
+	schemaName     string
 }
 
-func NewMigrator(postgresURL, migrationsPath string) *Migrator {
+func NewMigrator(postgresURL, migrationsPath, schemaName string) *Migrator {
 	return &Migrator{
 		postgresURL:    postgresURL,
 		migrationsPath: migrationsPath,
+		schemaName:     schemaName,
 	}
 }
 
 func (m *Migrator) Up() error {
-	goose.SetTableName("migrations")
+	goose.SetTableName(m.schemaName + "." + "migrations")
 	db, err := goose.OpenDBWithDriver("postgres", m.postgresURL)
 	if err != nil {
 		return fmt.Errorf("failed to open DB for migration: %w", err)
 	}
 
+	_, err = db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", m.schemaName))
+	if err != nil {
+		return fmt.Errorf("failed to create schema: %w", err)
+	}
 	err = goose.Up(db, m.migrationsPath)
 	if err != nil {
 		return fmt.Errorf("failed to up migrations: %w", err)
@@ -40,7 +46,7 @@ func (m *Migrator) Up() error {
 }
 
 func (m *Migrator) Down() error {
-	goose.SetTableName("migrations")
+	goose.SetTableName(m.schemaName + "." + "migrations")
 	db, err := goose.OpenDBWithDriver("postgres", m.postgresURL)
 	if err != nil {
 		return fmt.Errorf("failed to open DB for migration: %w", err)
@@ -49,6 +55,11 @@ func (m *Migrator) Down() error {
 	err = goose.Down(db, m.migrationsPath)
 	if err != nil {
 		return fmt.Errorf("failed to down migrations: %w", err)
+	}
+
+	_, err = db.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", m.schemaName))
+	if err != nil {
+		return fmt.Errorf("failed to delete schema: %w", err)
 	}
 
 	err = db.Close()

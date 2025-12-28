@@ -19,7 +19,7 @@ import (
 
 func main() {
 	var configPath, migrationPath string
-	flag.StringVar(&configPath, "config", "internal/common/config/test.yaml", "bot config path")
+	flag.StringVar(&configPath, "config", "test.yaml", "bot config path")
 	flag.StringVar(&migrationPath, "migrations", "migrations", "bot migrations path")
 	flag.Parse()
 
@@ -41,7 +41,7 @@ func main() {
 		log.Fatal("postgres init failed", zap.Error(err))
 	}
 
-	if err := goosemigrate.NewMigrator(cfg.GetPostgresURL(), "migrations").Up(); err != nil {
+	if err := goosemigrate.NewMigrator(cfg.GetPostgresURL(), "migrations", cfg.Postgres.Schema).Up(); err != nil {
 		log.Fatal("migrations up failed", zap.Error(err))
 	}
 

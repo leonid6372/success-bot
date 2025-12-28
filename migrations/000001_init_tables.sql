@@ -3,7 +3,7 @@
 
 create schema if not exists success_bot;
 
-create or replace function update_updated_at()
+create or replace function success_bot.update_updated_at()
     returns trigger as $$
 begin
     new.updated_at = now();
@@ -28,9 +28,9 @@ create table if not exists success_bot.users
 );
 
 create trigger update_users_updated_at
-    before update on users
+    before update on success_bot.users
     for each row
-    execute function update_updated_at();
+    execute function success_bot.update_updated_at();
 
 create table if not exists success_bot.promocodes (
     id                      serial      primary key,
@@ -77,9 +77,9 @@ create table if not exists success_bot.portfolios
 );
 
 create trigger update_portfolios_updated_at
-    before update on portfolios
+    before update on success_bot.portfolios
     for each row
-    execute function update_updated_at();
+    execute function success_bot.update_updated_at();
 
 -- +goose StatementEnd
 
@@ -91,7 +91,7 @@ drop table if exists success_bot.operations;
 drop table if exists success_bot.instruments;
 drop table if exists success_bot.promocodes;
 drop table if exists success_bot.users;
+drop function if exists success_bot.update_updated_at();
 drop schema if exists success_bot;
-drop function if exists success_bot.update_users_updated_at();
 
 -- +goose StatementEnd
