@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/leonid6372/success-bot/pkg/log"
@@ -15,9 +14,8 @@ const (
 )
 
 type Config struct {
-	Env             string        `yaml:"env" env:"ENV" env-default:"test" env-upd:""`
-	Location        string        `yaml:"location" env:"LOCATION" env-default:"Europe/Moscow" env-upd:""`
-	ShutdownTimeout time.Duration `yaml:"shutdown_timeout_duration" env:"SHUTDOWN_TIMEOUT_DURATION" env-default:"10s" env-upd:"true"`
+	Env      string `yaml:"env" env:"ENV" env-default:"test" env-upd:""`
+	Location string `yaml:"location" env:"LOCATION" env-default:"Europe/Moscow" env-upd:""`
 
 	Postgres Postgres `yaml:"postgres"`
 

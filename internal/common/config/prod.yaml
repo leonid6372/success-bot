@@ -1,6 +1,5 @@
 env: prod
 location: "Europe/Moscow"
-shutdown_timeout_duration: "10s"
 
 postgres:
   host: localhost
