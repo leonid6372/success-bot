@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/leonid6372/success-bot/pkg/log"
@@ -31,7 +32,11 @@ type Postgres struct {
 }
 
 type Bot struct {
-	APIKey string `yaml:"api_key" env:"BOT_API_KEY" env-upd:""`
+	APIKey              string        `yaml:"api_key" env:"BOT_API_KEY" env-upd:""`
+	Timeout             time.Duration `yaml:"timeout" env:"BOT_TIMEOUT" env-upd:""`
+	Languages           []string      `yaml:"languages" env:"BOT_LANGUAGES" env-upd:""`
+	SubscribeChannelID  int64         `yaml:"subscribe_channel_id" env:"BOT_SUBSCRIBE_CHANNEL_ID" env-upd:""`
+	SubscribeChannelURL string        `yaml:"subscribe_channel_url" env:"BOT_SUBSCRIBE_CHANNEL_URL" env-upd:""`
 }
 
 func (c *Config) GetPostgresURL() string {

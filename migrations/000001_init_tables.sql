@@ -21,7 +21,7 @@ create table if not exists success_bot.users
     language_code           varchar(2)      default 'en'    not null,
     is_premium              boolean         default false   not null,
 
-    available_balance       numeric(10, 2)  default 100000  not null,
+    balance                 numeric(10, 2)  default 100000  not null,
 
     created_at              timestamp       default now()   not null,
     updated_at              timestamp       default now()   not null
@@ -44,7 +44,7 @@ create table if not exists success_bot.instruments
 (
     id                      serial          primary key,
 
-    ticker                  varchar(16)     not null,
+    ticker                  varchar(16)     not null unique,
     name                    varchar(128)    not null
 );
 
@@ -52,26 +52,26 @@ create table if not exists success_bot.operations
 (
     id                      serial          primary key,
 
-    user_id                 bigint          not null,
-    instrument_id           bigint          not null,
-    type                    varchar(16)     not null, -- e.g., 'buy', 'sold', 'promocode'
+    user_id                 bigint                          not null,
+    instrument_id           bigint                          not null,
+    type                    varchar(16)                     not null, -- e.g., 'buy', 'sold', 'promocode'
 
-    count                   int             not null,
-    price                   numeric(10, 2)  not null,
-    amount                  numeric(10, 2)  not null,
+    count                   int                             not null,
+    price                   numeric(10, 2)                  not null,
+    amount                  numeric(10, 2)                  not null,
 
-    created_at              timestamp       default now() not null
+    created_at              timestamp       default now()   not null
 );
 
 create table if not exists success_bot.portfolios
 (
-    user_id                 bigint          not null,
-    instrument_id           bigint          not null,
-    count                   int             not null,
-    average_price           numeric(10, 2)  not null,
+    user_id                 bigint                          not null,
+    instrument_id           bigint                          not null,
+    count                   int                             not null,
+    average_price           numeric(10, 2)                  not null,
 
-    created_at              timestamp       default now() not null,
-    updated_at              timestamp       default now() not null,
+    created_at              timestamp       default now()   not null,
+    updated_at              timestamp       default now()   not null,
 
     unique(user_id, instrument_id)
 );

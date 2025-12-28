@@ -10,6 +10,11 @@ require (
 )
 
 require (
+	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
+	gopkg.in/telebot.v4 v4.0.0-beta.7 // indirect
+)
+
+require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgpassfile v1.0.0 // indirect

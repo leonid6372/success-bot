@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const DefaultLanguage = "en"
+
 type Dictionary struct {
 	dictionary map[string]map[string]string // map[language_code]map[key]value
 
