@@ -27,7 +27,8 @@ type Dependencies struct {
 	finam      *finam.Client
 	dictionary *dictionary.Dictionary
 
-	userRepository domain.UsersRepository
+	userRepository        domain.UsersRepository
+	instrumentsRepository domain.InstrumentsRepository
 }
 
 func New(ctx context.Context,
@@ -35,6 +36,7 @@ func New(ctx context.Context,
 	finam *finam.Client,
 	dictionary *dictionary.Dictionary,
 	userRepository domain.UsersRepository,
+	instrumentsRepository domain.InstrumentsRepository,
 ) (*Bot, error) {
 	b, err := telebot.NewBot(telebot.Settings{
 		Token:  cfg.APIKey,
@@ -49,9 +51,10 @@ func New(ctx context.Context,
 		cfg:     cfg,
 		cache:   cache.New(16*time.Minute, 8*time.Minute),
 		deps: &Dependencies{
-			finam:          finam,
-			dictionary:     dictionary,
-			userRepository: userRepository,
+			finam:                 finam,
+			dictionary:            dictionary,
+			userRepository:        userRepository,
+			instrumentsRepository: instrumentsRepository,
 		},
 	}
 
@@ -95,6 +98,14 @@ func (b *Bot) setupMessageRoutes() {
 
 	message.Handle("/start", b.startHandler)
 	message.Handle("/language", b.selectLanguageHandler)
+
+	for _, lang := range b.cfg.Languages {
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnMainMenu)}, b.mainMenuHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}, b.instrumentsListHandler)
+		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}, b.faqHandler)
+		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnProfile)}, b.profileHandler)
+		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}, b.enterPromocodeHandler)
+	}
 }
 
 func (b *Bot) setupCallbackRoutes() {
@@ -102,6 +113,7 @@ func (b *Bot) setupCallbackRoutes() {
 
 	callback.Handle(&telebot.Btn{Unique: cbkLanguage}, b.setLanguageHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkCheckSubscription}, b.checkSubscriptionHandler)
+	callback.Handle(&telebot.Btn{Unique: cbkInstrumentsListPage}, b.instrumentsListHandler)
 }
 
 func (b *Bot) Start() {

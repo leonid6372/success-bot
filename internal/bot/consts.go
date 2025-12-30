@@ -6,8 +6,10 @@ const (
 )
 
 const (
-	cbkLanguage          = "language"
-	cbkCheckSubscription = "check_subscription"
+	cbkLanguage            = "language"
+	cbkCheckSubscription   = "check_subscription"
+	cbkInstrument          = "instrument"
+	cbkInstrumentsListPage = "instruments_list_page"
 )
 
 const (
@@ -17,19 +19,22 @@ const (
 	msgSubscriptionSuccess = "subscription_success"
 	msgSubscriptionFailed  = "subscription_failed"
 	msgLanguage            = "select_language"
+	msgInstrumentsList     = "instruments_list"
 )
 
 const (
-	btnSubscribe      = "button_subscribe"
-	btnSubscribed     = "button_subscribed"
-	btnLanguage       = "button_language"
-	btnProfile        = "button_profile"
-	btnPortfolio      = "button_portfolio"
-	btnTickersList    = "button_tickers_list"
-	btnTickersSearch  = "button_tickers_search"
-	btnEnterPromocode = "button_enter_promocode"
-	btnFAQ            = "button_faq"
-	btnTopUsers       = "button_top_users"
-	btnMainMenu       = "button_main_menu"
-	btnBack           = "button_back"
+	btnSubscribe         = "button_subscribe"
+	btnSubscribed        = "button_subscribed"
+	btnLanguage          = "button_language"
+	btnProfile           = "button_profile"
+	btnPortfolio         = "button_portfolio"
+	btnInstrumentsList   = "button_instruments_list"
+	btnInstrumentsSearch = "button_instruments_search"
+	btnEnterPromocode    = "button_enter_promocode"
+	btnFAQ               = "button_faq"
+	btnTopUsers          = "button_top_users"
+	btnMainMenu          = "button_main_menu"
+	btnBack              = "button_back"
+	btnNextPage          = "button_next_page"
+	btnPreviousPage      = "button_previous_page"
 )

@@ -75,10 +75,6 @@ func (b *Bot) subscribeMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc 
 			return next(c)
 		}
 
-		log.Info("checking user subscription",
-			zap.Int64("userID", message.Chat.ID),
-			zap.Int64("channelID", b.cfg.SubscribeChannelID))
-
 		subscribed := true
 		var err error
 

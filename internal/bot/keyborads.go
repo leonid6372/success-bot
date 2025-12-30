@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 
+	"github.com/leonid6372/success-bot/internal/common/domain"
 	"gopkg.in/telebot.v4"
 )
 
@@ -11,14 +12,14 @@ func (b *Bot) mainMenuKeyboard(lang string) *telebot.ReplyMarkup {
 
 	btnProfile := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnProfile)}
 	btnPortfolio := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}
-	btnTickersList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTickersList)}
-	btnTickersSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTickersSearch)}
+	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
+	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsSearch)}
 	btnFAQ := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}
 	btnEnterPromocode := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}
 
 	rows := []telebot.Row{
 		{btnProfile, btnPortfolio},
-		{btnTickersList, btnTickersSearch},
+		{btnInstrumentsList, btnInstrumentsSearch},
 		{btnEnterPromocode, btnFAQ},
 	}
 
@@ -53,6 +54,60 @@ func (b *Bot) languagesKeyboard() *telebot.ReplyMarkup {
 
 		btn := markup.Data(text, callbackData)
 		rows = append(rows, telebot.Row{btn})
+	}
+
+	markup.Inline(rows...)
+	return markup
+}
+
+func (b *Bot) instrumentsListByPageKeyboard(
+	lang string, instruments []*domain.Instrument, currentPage, pagesCount int64,
+) *telebot.ReplyMarkup {
+	markup := &telebot.ReplyMarkup{}
+	var rows []telebot.Row
+
+	if currentPage == 1 {
+		rows = append(rows, telebot.Row{
+			markup.Data(
+				b.deps.dictionary.Text(lang, btnNextPage),
+				fmt.Sprintf("%s|%d", cbkInstrumentsListPage, currentPage+1),
+			),
+		})
+	}
+
+	if currentPage == pagesCount {
+		rows = append(rows, telebot.Row{
+			markup.Data(
+				b.deps.dictionary.Text(lang, btnPreviousPage),
+				fmt.Sprintf("%s|%d", cbkInstrumentsListPage, currentPage-1),
+			),
+		})
+	}
+
+	if currentPage > 1 && currentPage < pagesCount {
+		rows = append(rows, telebot.Row{
+			markup.Data(
+				b.deps.dictionary.Text(lang, btnPreviousPage),
+				fmt.Sprintf("%s|%d", cbkInstrumentsListPage, currentPage-1),
+			),
+			markup.Data(
+				b.deps.dictionary.Text(lang, btnNextPage),
+				fmt.Sprintf("%s|%d", cbkInstrumentsListPage, currentPage+1),
+			),
+		})
+	}
+
+	for i := 0; i < len(instruments); i += 2 {
+		end := min(i+2, len(instruments))
+
+		var rowBtns []telebot.Btn
+		for _, instrument := range instruments[i:end] {
+			text := instrument.Name
+			callbackData := fmt.Sprintf("%s|%s", cbkInstrument, instrument.Ticker)
+
+			rowBtns = append(rowBtns, markup.Data(text, callbackData))
+		}
+		rows = append(rows, rowBtns)
 	}
 
 	markup.Inline(rows...)

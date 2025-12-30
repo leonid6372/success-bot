@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
@@ -65,7 +66,7 @@ func (b *Bot) startMsg(c telebot.Context) error {
 	user := b.mustUser(c)
 
 	data := map[string]any{
-		"ButtonTickersList": b.deps.dictionary.Text(user.LanguageCode, btnTickersList),
+		"ButtonInstrumentsList": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentsList),
 	}
 
 	text := b.deps.dictionary.Text(user.LanguageCode, msgStart, data)
@@ -138,6 +139,66 @@ func (b *Bot) checkSubscriptionHandler(c telebot.Context) error {
 		if c.Callback() != nil {
 			return c.Respond(&telebot.CallbackResponse{Text: text})
 		}
+	}
+
+	return nil
+}
+
+func (b *Bot) mainMenuHandler(c telebot.Context) error {
+	user := b.mustUser(c)
+
+	if err := c.Send(c.Text(), &telebot.SendOptions{
+		ReplyMarkup: b.mainMenuKeyboard(user.LanguageCode),
+		ParseMode:   telebot.ModeHTML,
+	}); err != nil {
+		return fmt.Errorf("failed to send message: %v", err)
+	}
+
+	return nil
+}
+
+func (b *Bot) instrumentsListHandler(c telebot.Context) error {
+	defer c.Respond()
+
+	user := b.mustUser(c)
+
+	var currentPage int64
+	var err error
+
+	args := c.Args()
+
+	if len(args) == 1 {
+		currentPage, err = strconv.ParseInt(args[0], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse current page: %v", err)
+		}
+	} else {
+		currentPage = 1
+	}
+
+	instrumentsListPagesCount, err := b.deps.instrumentsRepository.GetInstrumentsCount(c.Get(ctxContext).(context.Context))
+	if err != nil {
+		return fmt.Errorf("failed to get instruments count: %v", err)
+	}
+
+	instruments, err := b.deps.instrumentsRepository.GetInstrumentsByPage(
+		c.Get(ctxContext).(context.Context), currentPage,
+	)
+
+	data := map[string]any{
+		"CurrentPage":             currentPage,
+		"PagesCount":              instrumentsListPagesCount,
+		"ButtonInstrumentsSearch": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentsSearch),
+	}
+
+	text := b.deps.dictionary.Text(user.LanguageCode, msgInstrumentsList, data)
+
+	markup := b.instrumentsListByPageKeyboard(
+		user.LanguageCode, instruments, currentPage, instrumentsListPagesCount,
+	)
+
+	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
+		return fmt.Errorf("failed to send message: %v", err)
 	}
 
 	return nil
