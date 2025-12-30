@@ -14,13 +14,15 @@ func (b *Bot) mainMenuKeyboard(lang string) *telebot.ReplyMarkup {
 	btnPortfolio := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}
 	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
 	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsSearch)}
-	btnFAQ := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}
 	btnEnterPromocode := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}
+	btnFAQ := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}
+	btnTopUsers := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}
 
 	rows := []telebot.Row{
 		{btnProfile, btnPortfolio},
 		{btnInstrumentsList, btnInstrumentsSearch},
 		{btnEnterPromocode, btnFAQ},
+		{btnTopUsers},
 	}
 
 	markup.Reply(rows...)
