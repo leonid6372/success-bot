@@ -19,7 +19,8 @@ type Config struct {
 
 	Postgres Postgres `yaml:"postgres"`
 
-	Bot Bot `yaml:"bot"`
+	Bot   Bot   `yaml:"bot"`
+	Finam Finam `yaml:"finam"`
 }
 
 type Postgres struct {
@@ -37,6 +38,10 @@ type Bot struct {
 	Languages           []string      `yaml:"languages" env:"BOT_LANGUAGES" env-upd:""`
 	SubscribeChannelID  int64         `yaml:"subscribe_channel_id" env:"BOT_SUBSCRIBE_CHANNEL_ID" env-upd:""`
 	SubscribeChannelURL string        `yaml:"subscribe_channel_url" env:"BOT_SUBSCRIBE_CHANNEL_URL" env-upd:""`
+}
+
+type Finam struct {
+	Token string `yaml:"token" env:"FINAM_TOKEN" env-upd:""`
 }
 
 func (c *Config) GetPostgresURL() string {

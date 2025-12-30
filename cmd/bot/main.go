@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Ruvad39/go-finam-rest"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leonid6372/success-bot/internal/bot"
 	"github.com/leonid6372/success-bot/internal/common/config"
@@ -47,8 +48,14 @@ func main() {
 
 	userRepository := postgres.NewUsersRepository(pool)
 
+	log.Info("init finam...")
+	finam, err := finam.NewClient(ctx, cfg.Finam.Token)
+	if err != nil {
+		log.Fatal("finam init failed", zap.Error(err))
+	}
+
 	log.Info("init telebot...")
-	bot, err := bot.New(ctx, &cfg.Bot, dictionary, userRepository)
+	bot, err := bot.New(ctx, &cfg.Bot, finam, dictionary, userRepository)
 	if err != nil {
 		log.Fatal("bot starting failed", zap.Error(err))
 	}

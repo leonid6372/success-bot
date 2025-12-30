@@ -17,3 +17,6 @@ bot:
     - ru
   subscribe_channel_id: -1050000500001
   subscribe_channel_url: https://t.me/example_channel
+
+finam:
+  token: test_finam_token

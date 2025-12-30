@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/Ruvad39/go-finam-rest"
 	"github.com/leonid6372/success-bot/internal/common/config"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/cache"
@@ -23,6 +24,7 @@ type Bot struct {
 }
 
 type Dependencies struct {
+	finam      *finam.Client
 	dictionary *dictionary.Dictionary
 
 	userRepository domain.UsersRepository
@@ -30,6 +32,7 @@ type Dependencies struct {
 
 func New(ctx context.Context,
 	cfg *config.Bot,
+	finam *finam.Client,
 	dictionary *dictionary.Dictionary,
 	userRepository domain.UsersRepository,
 ) (*Bot, error) {
@@ -46,6 +49,7 @@ func New(ctx context.Context,
 		cfg:     cfg,
 		cache:   cache.New(16*time.Minute, 8*time.Minute),
 		deps: &Dependencies{
+			finam:          finam,
 			dictionary:     dictionary,
 			userRepository: userRepository,
 		},

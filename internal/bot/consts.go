@@ -31,4 +31,5 @@ const (
 	btnFAQ            = "button_faq"
 	btnTopUsers       = "button_top_users"
 	btnMainMenu       = "button_main_menu"
+	btnBack           = "button_back"
 )
