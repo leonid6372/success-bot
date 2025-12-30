@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const DefaultLanguage = "en"
+const DefaultLanguage = "ru"
 
 type Dictionary struct {
 	dictionary map[string]map[string]string // map[language_code]map[key]value
@@ -65,7 +65,7 @@ func (d *Dictionary) Text(lang, key string, values ...map[string]any) string {
 		valuesMap = values[0]
 	}
 
-	// format numeric types in values
+	// Format numeric types in values
 	for key, value := range valuesMap {
 		switch v := value.(type) {
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:

@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/leonid6372/success-bot/pkg/errs"
 )
 
 type Item struct {
@@ -984,12 +986,12 @@ func (c *cache) Save(w io.Writer) (err error) {
 func (c *cache) SaveFile(fname string) error {
 	fp, err := os.Create(fname)
 	if err != nil {
-		return err
+		return errs.NewStack(err)
 	}
 	err = c.Save(fp)
 	if err != nil {
 		fp.Close()
-		return err
+		return errs.NewStack(err)
 	}
 	return fp.Close()
 }
@@ -1013,7 +1015,7 @@ func (c *cache) Load(r io.Reader) error {
 			}
 		}
 	}
-	return err
+	return errs.NewStack(err)
 }
 
 // Load and add cache items from the given filename, excluding any items with
@@ -1024,12 +1026,12 @@ func (c *cache) Load(r io.Reader) error {
 func (c *cache) LoadFile(fname string) error {
 	fp, err := os.Open(fname)
 	if err != nil {
-		return err
+		return errs.NewStack(err)
 	}
 	err = c.Load(fp)
 	if err != nil {
 		fp.Close()
-		return err
+		return errs.NewStack(err)
 	}
 	return fp.Close()
 }

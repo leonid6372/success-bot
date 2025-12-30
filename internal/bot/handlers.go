@@ -1,8 +1,12 @@
 package bot
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/leonid6372/success-bot/internal/common/domain"
+	"github.com/leonid6372/success-bot/pkg/dictionary"
+	"github.com/leonid6372/success-bot/pkg/errs"
 	"github.com/leonid6372/success-bot/pkg/log"
 	"go.uber.org/zap"
 	"gopkg.in/telebot.v4"
@@ -18,7 +22,40 @@ func (b *Bot) notSubscribedHandler(c telebot.Context) error {
 	markup := b.subscribeKeyboard(user.LanguageCode, b.cfg.SubscribeChannelURL)
 
 	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
-		return fmt.Errorf("failed to send subscription message: %w", err)
+		return errs.NewStack(err)
+	}
+
+	return nil
+}
+
+func (b *Bot) startHandler(c telebot.Context) error {
+	ctx := c.Get(ctxContext).(context.Context)
+	user := b.mustUser(c)
+
+	if user == nil {
+		if err := b.deps.userRepository.CreateUser(ctx, &domain.User{
+			ID:        c.Sender().ID,
+			Username:  c.Sender().Username,
+			FirstName: c.Sender().FirstName,
+			LastName:  c.Sender().LastName,
+			IsPremium: c.Sender().IsPremium,
+		}); err != nil {
+			return errs.NewStack(err)
+		}
+
+		return b.selectLanguageHandler(c)
+	}
+
+	return b.startMsg(c)
+}
+
+func (b *Bot) selectLanguageHandler(c telebot.Context) error {
+	text := b.deps.dictionary.Text(dictionary.DefaultLanguage, msgLanguage)
+
+	markup := b.languagesKeyboard()
+
+	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
+		return fmt.Errorf("failed to send message: %v", err)
 	}
 
 	return nil
@@ -46,6 +83,7 @@ func (b *Bot) startMsg(c telebot.Context) error {
 func (b *Bot) setLanguageHandler(c telebot.Context) error {
 	defer c.Respond()
 
+	ctx := c.Get(ctxContext).(context.Context)
 	tgID := c.Sender().ID
 	args := c.Args()
 
@@ -55,12 +93,12 @@ func (b *Bot) setLanguageHandler(c telebot.Context) error {
 
 	langCode := args[0]
 
-	// update user in repository
-	if err := b.deps.userRepository.UpdateUserLanguage(b.ctx, tgID, langCode); err != nil {
+	// Update user in repository
+	if err := b.deps.userRepository.UpdateUserLanguage(ctx, tgID, langCode); err != nil {
 		return fmt.Errorf("failed to update user language_code in repository: %w", err)
 	}
 
-	// update user in cache
+	// Update user in cache
 	user := b.mustUser(c)
 	user.LanguageCode = langCode
 	b.cache.SetDefault(user.ID, user)

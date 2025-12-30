@@ -13,7 +13,7 @@ $$ language plpgsql;
 
 create table if not exists success_bot.users
 (
-    id                      serial          primary key,
+    id                      bigserial       primary key,
 
     username                varchar(32)     default ''      not null,
     first_name              varchar(64)     default ''      not null,
@@ -21,7 +21,7 @@ create table if not exists success_bot.users
     language_code           varchar(2)      default 'en'    not null,
     is_premium              boolean         default false   not null,
 
-    balance                 numeric(10, 2)  default 100000  not null,
+    balance                 numeric(10, 2)  default 250000  not null,
 
     created_at              timestamp       default now()   not null,
     updated_at              timestamp       default now()   not null
@@ -33,7 +33,7 @@ create trigger update_users_updated_at
     execute function success_bot.update_updated_at();
 
 create table if not exists success_bot.promocodes (
-    id                      serial      primary key,
+    id                      bigserial       primary key,
     available_count         int             default 0       not null,
     value                   varchar(64)                     not null,
     bonus_amount            numeric(10, 2)  default 0       not null,
@@ -42,7 +42,7 @@ create table if not exists success_bot.promocodes (
 
 create table if not exists success_bot.instruments
 (
-    id                      serial          primary key,
+    id                      bigserial       primary key,
 
     ticker                  varchar(16)     not null unique,
     name                    varchar(128)    not null
@@ -50,7 +50,7 @@ create table if not exists success_bot.instruments
 
 create table if not exists success_bot.operations
 (
-    id                      serial          primary key,
+    id                      bigserial       primary key,
 
     user_id                 bigint                          not null,
     instrument_id           bigint                          not null,

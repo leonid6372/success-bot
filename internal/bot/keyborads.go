@@ -9,10 +9,17 @@ import (
 func (b *Bot) mainMenuKeyboard(lang string) *telebot.ReplyMarkup {
 	markup := &telebot.ReplyMarkup{}
 
+	btnProfile := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnProfile)}
 	btnPortfolio := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}
+	btnTickersList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTickersList)}
+	btnTickersSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTickersSearch)}
+	btnFAQ := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}
+	btnEnterPromocode := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}
 
 	rows := []telebot.Row{
-		{btnPortfolio},
+		{btnProfile, btnPortfolio},
+		{btnTickersList, btnTickersSearch},
+		{btnEnterPromocode, btnFAQ},
 	}
 
 	markup.Reply(rows...)

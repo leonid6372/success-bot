@@ -2,9 +2,12 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leonid6372/success-bot/internal/common/domain"
+	"github.com/leonid6372/success-bot/pkg/errs"
 )
 
 type usersRepository struct {
@@ -23,7 +26,7 @@ func (ur *usersRepository) CreateUser(ctx context.Context, user *domain.User) er
 			username,
 			first_name,
 			last_name,
-			is_premium,
+			is_premium
 		)
 		VALUES ($1, $2, $3, $4, $5)`
 	_, err := ur.psql.Exec(ctx,
@@ -35,7 +38,7 @@ func (ur *usersRepository) CreateUser(ctx context.Context, user *domain.User) er
 		user.IsPremium,
 	)
 	if err != nil {
-		return err
+		return errs.NewStack(err)
 	}
 
 	return nil
@@ -65,6 +68,10 @@ func (ur *usersRepository) GetUserByID(ctx context.Context, id int64) (*domain.U
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 
@@ -81,7 +88,7 @@ func (ur *usersRepository) UpdateUserTGData(ctx context.Context, user *domain.Us
 		WHERE id = $5`
 	_, err := ur.psql.Exec(ctx, query, user.Username, user.FirstName, user.LastName, user.IsPremium, user.ID)
 	if err != nil {
-		return err
+		return errs.NewStack(err)
 	}
 
 	return nil
@@ -93,7 +100,7 @@ func (ur *usersRepository) UpdateUserLanguage(ctx context.Context, userID int64,
 		WHERE id = $2`
 	_, err := ur.psql.Exec(ctx, query, languageCode, userID)
 	if err != nil {
-		return err
+		return errs.NewStack(err)
 	}
 
 	return nil

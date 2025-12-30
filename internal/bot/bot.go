@@ -10,13 +10,13 @@ import (
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/cache"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
+	"github.com/leonid6372/success-bot/pkg/errs"
 	"gopkg.in/telebot.v4"
 )
 
 type Bot struct {
 	Telebot *telebot.Bot
 	cfg     *config.Bot
-	ctx     context.Context
 	cache   *cache.Cache
 
 	deps *Dependencies
@@ -44,7 +44,6 @@ func New(ctx context.Context,
 	bot := &Bot{
 		Telebot: b,
 		cfg:     cfg,
-		ctx:     ctx,
 		cache:   cache.New(16*time.Minute, 8*time.Minute),
 		deps: &Dependencies{
 			dictionary:     dictionary,
@@ -57,6 +56,7 @@ func New(ctx context.Context,
 	}
 
 	bot.setupMiddlewares()
+	bot.setupMessageRoutes()
 	bot.setupCallbackRoutes()
 
 	return bot, nil
@@ -69,7 +69,7 @@ func (b *Bot) setCommands() error {
 	}
 
 	if err := b.Telebot.SetCommands(commands); err != nil {
-		return err
+		return errs.NewStack(err)
 	}
 
 	return nil
@@ -79,10 +79,18 @@ func (b *Bot) setupMiddlewares() {
 	b.Telebot.Use(
 		b.recoveryMiddleware,
 		b.defaultErrorMiddleware,
+		b.timeoutMiddleware,
 		b.updateUserInfoMiddleware,
 		b.selectUserMiddleware,
 		b.subscribeMiddleware,
 	)
+}
+
+func (b *Bot) setupMessageRoutes() {
+	message := b.Telebot.Group()
+
+	message.Handle("/start", b.startHandler)
+	message.Handle("/language", b.selectLanguageHandler)
 }
 
 func (b *Bot) setupCallbackRoutes() {

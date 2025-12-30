@@ -10,6 +10,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const callerSkip = 8
+
 var l *logger
 
 func init() {
@@ -102,8 +104,6 @@ func customEncodeCaller(_ zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder
 }
 
 func findCaller() (string, string, int) {
-	const callerSkip = 8
-
 	var (
 		pc       uintptr
 		file     string
