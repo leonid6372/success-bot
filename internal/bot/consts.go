@@ -20,6 +20,7 @@ const (
 	msgSubscriptionFailed  = "subscription_failed"
 	msgLanguage            = "select_language"
 	msgInstrumentsList     = "instruments_list"
+	msgInstrument          = "instrument"
 )
 
 const (
@@ -34,7 +35,9 @@ const (
 	btnFAQ               = "button_faq"
 	btnTopUsers          = "button_top_users"
 	btnMainMenu          = "button_main_menu"
-	btnBack              = "button_back"
 	btnNextPage          = "button_next_page"
 	btnPreviousPage      = "button_previous_page"
+	btnLastPrice         = "button_last_price"
+	btnBuy               = "button_buy"
+	btnSold              = "button_sold"
 )

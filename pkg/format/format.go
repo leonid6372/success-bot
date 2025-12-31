@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func PrettyNumber(number interface{}, separator, decimalSeparator string) string {
+func PrettyNumber(number any, separator, decimalSeparator string) string {
 	var numStr string
 
 	switch number.(type) {

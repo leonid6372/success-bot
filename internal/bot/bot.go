@@ -6,12 +6,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/Ruvad39/go-finam-rest"
 	"github.com/leonid6372/success-bot/internal/common/config"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/cache"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
 	"github.com/leonid6372/success-bot/pkg/errs"
+	"github.com/leonid6372/success-bot/pkg/finam"
 	"gopkg.in/telebot.v4"
 )
 
@@ -24,6 +24,8 @@ type Bot struct {
 }
 
 type Dependencies struct {
+	ctx context.Context
+
 	finam      *finam.Client
 	dictionary *dictionary.Dictionary
 
@@ -51,6 +53,7 @@ func New(ctx context.Context,
 		cfg:     cfg,
 		cache:   cache.New(16*time.Minute, 8*time.Minute),
 		deps: &Dependencies{
+			ctx:                   ctx,
 			finam:                 finam,
 			dictionary:            dictionary,
 			userRepository:        userRepository,
@@ -114,6 +117,7 @@ func (b *Bot) setupCallbackRoutes() {
 	callback.Handle(&telebot.Btn{Unique: cbkLanguage}, b.setLanguageHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkCheckSubscription}, b.checkSubscriptionHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkInstrumentsListPage}, b.instrumentsListHandler)
+	callback.Handle(&telebot.Btn{Unique: cbkInstrument}, b.instrumentHandler)
 }
 
 func (b *Bot) Start() {

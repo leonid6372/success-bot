@@ -41,7 +41,8 @@ type Bot struct {
 }
 
 type Finam struct {
-	Token string `yaml:"token" env:"FINAM_TOKEN" env-upd:""`
+	Token     string `yaml:"token" env:"FINAM_TOKEN" env-upd:""`
+	AccountID string `yaml:"account_id" env:"FINAM_ACCOUNT_ID" env-upd:""`
 }
 
 func (c *Config) GetPostgresURL() string {

@@ -7,12 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Ruvad39/go-finam-rest"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leonid6372/success-bot/internal/bot"
 	"github.com/leonid6372/success-bot/internal/common/config"
 	"github.com/leonid6372/success-bot/internal/common/repositories/postgres"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
+	"github.com/leonid6372/success-bot/pkg/finam"
 	"github.com/leonid6372/success-bot/pkg/goosemigrate"
 	"github.com/leonid6372/success-bot/pkg/log"
 	"go.uber.org/zap"
@@ -50,7 +50,7 @@ func main() {
 	instrumentsRepository := postgres.NewInstrumentsRepository(pool)
 
 	log.Info("init finam...")
-	finam, err := finam.NewClient(ctx, cfg.Finam.Token)
+	finam, err := finam.NewClient(ctx, cfg.Finam.Token, cfg.Finam.AccountID)
 	if err != nil {
 		log.Fatal("finam init failed", zap.Error(err))
 	}

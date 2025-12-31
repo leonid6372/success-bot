@@ -13,6 +13,10 @@ type UsersRepository interface {
 	UpdateUserLanguage(ctx context.Context, userID int64, languageCode string) error
 }
 
+type Metadata struct {
+	InstrumentDone *chan struct{}
+}
+
 type User struct {
 	ID int64 `json:"id"`
 
@@ -23,6 +27,8 @@ type User struct {
 	IsPremium    bool   `json:"is_premium"`
 
 	Balance float64 `json:"balance"`
+
+	Metadata Metadata `json:"metadata"`
 
 	UpdatedAt time.Time `json:"updated_at"`
 	CreatedAt time.Time `json:"created_at"`
