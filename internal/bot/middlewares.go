@@ -58,7 +58,7 @@ func (b *Bot) updateUserInfoMiddleware(next telebot.HandlerFunc) telebot.Handler
 			IsPremium: sender.IsPremium,
 		}
 
-		if err := b.deps.userRepository.UpdateUserTGData(ctx, user); err != nil {
+		if err := b.deps.usersRepository.UpdateUserTGData(ctx, user); err != nil {
 			log.Error("failed to update user info", zap.Error(err))
 		}
 
@@ -125,7 +125,7 @@ func (b *Bot) selectUserMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc
 			return next(c)
 		}
 
-		user, err := b.deps.userRepository.GetUserByID(ctx, tgID)
+		user, err := b.deps.usersRepository.GetUserByID(ctx, tgID)
 		if err != nil {
 			return errs.NewStack(err)
 		}

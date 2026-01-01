@@ -37,6 +37,31 @@ func (u *User) CreateDomain() *domain.User {
 	return user
 }
 
+type TopUserData struct {
+	Username string  `db:"username"`
+	Balance  float64 `db:"balance"`
+	Ticker   *string `db:"ticker"`
+	Count    *int64  `db:"count"`
+}
+
+func (d *TopUserData) CreateDomain() *domain.TopUserData {
+	data := &domain.TopUserData{
+		TopUser: domain.TopUser{
+			Username: d.Username,
+			Balance:  d.Balance,
+		},
+	}
+
+	if d.Ticker != nil {
+		data.Ticker = *d.Ticker
+	}
+	if d.Count != nil {
+		data.Count = *d.Count
+	}
+
+	return data
+}
+
 type Instrument struct {
 	ID     int64  `db:"id"`
 	Ticker string `db:"ticker"`

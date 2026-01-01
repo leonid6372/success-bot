@@ -3,7 +3,7 @@ package domain
 import "context"
 
 type InstrumentsRepository interface {
-	GetInstrumentsCount(ctx context.Context) (int64, error)
+	GetInstrumentsPagesCount(ctx context.Context) (int64, error)
 	GetInstruments(ctx context.Context) ([]*Instrument, error)
 	GetInstrumentsByPage(ctx context.Context, page int64) ([]*Instrument, error)
 }

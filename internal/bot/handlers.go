@@ -35,20 +35,24 @@ func (b *Bot) startHandler(c telebot.Context) error {
 	ctx := c.Get(ctxContext).(context.Context)
 	user := b.mustUser(c)
 
-	if user.Metadata.InstrumentDone != nil {
+	if user != nil && user.Metadata.InstrumentDone != nil {
 		b.closeInstrument(user)
 	}
 
 	if user == nil {
-		if err := b.deps.userRepository.CreateUser(ctx, &domain.User{
+		user := &domain.User{
 			ID:        c.Sender().ID,
 			Username:  c.Sender().Username,
 			FirstName: c.Sender().FirstName,
 			LastName:  c.Sender().LastName,
 			IsPremium: c.Sender().IsPremium,
-		}); err != nil {
+		}
+
+		if err := b.deps.usersRepository.CreateUser(ctx, user); err != nil {
 			return errs.NewStack(err)
 		}
+
+		b.cache.SetDefault(user.ID, user)
 
 		return b.selectLanguageHandler(c)
 	}
@@ -58,6 +62,9 @@ func (b *Bot) startHandler(c telebot.Context) error {
 
 func (b *Bot) selectLanguageHandler(c telebot.Context) error {
 	user := b.mustUser(c)
+	if user == nil {
+		return errs.NewStack(fmt.Errorf("user not found in cache"))
+	}
 
 	if user.Metadata.InstrumentDone != nil {
 		b.closeInstrument(user)
@@ -81,11 +88,9 @@ func (b *Bot) startMsg(c telebot.Context) error {
 		b.closeInstrument(user)
 	}
 
-	data := map[string]any{
+	text := b.deps.dictionary.Text(user.LanguageCode, msgStart, map[string]any{
 		"ButtonInstrumentsList": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentsList),
-	}
-
-	text := b.deps.dictionary.Text(user.LanguageCode, msgStart, data)
+	})
 
 	if err := c.Send(text, &telebot.SendOptions{
 		ReplyMarkup: b.mainMenuKeyboard(user.LanguageCode),
@@ -111,14 +116,17 @@ func (b *Bot) setLanguageHandler(c telebot.Context) error {
 	langCode := args[0]
 
 	// Update user in repository
-	if err := b.deps.userRepository.UpdateUserLanguage(ctx, tgID, langCode); err != nil {
+	if err := b.deps.usersRepository.UpdateUserLanguage(ctx, tgID, langCode); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to update user language_code in repository: %w", err))
 	}
 
 	// Update user in cache
 	user := b.mustUser(c)
+	if user == nil {
+		return errs.NewStack(fmt.Errorf("user not found in cache"))
+	}
+
 	user.LanguageCode = langCode
-	//b.cache.SetDefault(user.ID, user) todo: check if needed because we use pointerss
 
 	return b.startMsg(c)
 }
@@ -201,23 +209,24 @@ func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 		currentPage = 1
 	}
 
-	instrumentsListPagesCount, err := b.deps.instrumentsRepository.GetInstrumentsCount(ctx)
+	pagesCount, err := b.deps.instrumentsRepository.GetInstrumentsPagesCount(ctx)
 	if err != nil {
-		return errs.NewStack(fmt.Errorf("failed to get instruments count: %v", err))
+		return errs.NewStack(fmt.Errorf("failed to get instruments pages count: %v", err))
 	}
 
 	instruments, err := b.deps.instrumentsRepository.GetInstrumentsByPage(ctx, currentPage)
-
-	data := map[string]any{
-		"CurrentPage":             currentPage,
-		"PagesCount":              instrumentsListPagesCount,
-		"ButtonInstrumentsSearch": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentsSearch),
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get instruments by page: %v", err))
 	}
 
-	text := b.deps.dictionary.Text(user.LanguageCode, msgInstrumentsList, data)
+	text := b.deps.dictionary.Text(user.LanguageCode, msgInstrumentsList, map[string]any{
+		"CurrentPage":             currentPage,
+		"PagesCount":              pagesCount,
+		"ButtonInstrumentsSearch": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentsSearch),
+	})
 
 	markup := b.instrumentsListByPageKeyboard(
-		user.LanguageCode, instruments, currentPage, instrumentsListPagesCount,
+		user.LanguageCode, instruments, currentPage, pagesCount,
 	)
 
 	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
@@ -246,15 +255,15 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 	doneCh := make(chan struct{})
 	user.Metadata.InstrumentDone = &doneCh
-	//b.cache.SetDefault(user.ID, user) todo: check if needed because we use pointerss
 
 	go func(user *domain.User) {
-		data := map[string]any{
-			"InstrumentTicker": ticker,
-		}
+		text := b.deps.dictionary.Text(user.LanguageCode, msgInstrument, map[string]any{
+			"InstrumentTicker":      ticker,
+			"ButtonInstrumentsList": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentsList),
+			"ButtonMainMenu":        b.deps.dictionary.Text(user.LanguageCode, btnMainMenu),
+		})
 
-		text := b.deps.dictionary.Text(user.LanguageCode, msgInstrument, data)
-		if err := c.Send(text); err != nil {
+		if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
 			log.Error("failed to send message", zap.Error(err))
 			return
 		}
@@ -281,7 +290,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 				text := b.deps.dictionary.Text(user.LanguageCode, btnLastPrice, map[string]any{
 					"Color": color,
-					"Price": info.Quote.Last,
+					"Price": info.Quote.Last.Float64(),
 				})
 
 				markup := b.instrumentKeyboard(user.LanguageCode, &info)
@@ -296,6 +305,97 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 			time.Sleep(500 * time.Millisecond)
 		}
 	}(user)
+
+	return nil
+}
+
+func (b *Bot) topUsersHandler(c telebot.Context) error {
+	defer c.Respond()
+
+	user := b.mustUser(c)
+
+	var currentPage int64
+	var err error
+
+	args := c.Args()
+
+	if len(args) == 1 {
+		currentPage, err = strconv.ParseInt(args[0], 10, 64)
+		if err != nil {
+			return errs.NewStack(fmt.Errorf("failed to parse current page: %v", err))
+		}
+	} else {
+		currentPage = 1
+	}
+
+	b.mu.RLock()
+	pagesCount := int64(len(b.topUsers)/usersPerPage) + 1
+
+	var text, usersList string
+
+	if currentPage == 1 {
+		var top1Username, top2Username, top3Username string
+		var top1Balance, top2Balance, top3Balance float64
+
+		switch len(b.topUsers) {
+		case 1:
+			top1Username = b.topUsers[0].Username
+			top1Balance = b.topUsers[0].Balance
+		case 2:
+			top1Username = b.topUsers[0].Username
+			top1Balance = b.topUsers[0].Balance
+			top2Username = b.topUsers[1].Username
+			top2Balance = b.topUsers[1].Balance
+		case 3:
+			top1Username = b.topUsers[0].Username
+			top1Balance = b.topUsers[0].Balance
+			top2Username = b.topUsers[1].Username
+			top2Balance = b.topUsers[1].Balance
+			top3Username = b.topUsers[2].Username
+			top3Balance = b.topUsers[2].Balance
+		default:
+			top1Username = b.topUsers[0].Username
+			top1Balance = b.topUsers[0].Balance
+			top2Username = b.topUsers[1].Username
+			top2Balance = b.topUsers[1].Balance
+			top3Username = b.topUsers[2].Username
+			top3Balance = b.topUsers[2].Balance
+
+			for i := 3; i < min(usersPerPage, len(b.topUsers)); i++ {
+				usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].Balance)
+			}
+			b.mu.RUnlock()
+		}
+
+		text = b.deps.dictionary.Text(user.LanguageCode, msgTopUsersFirstPage, map[string]any{
+			"CurrentPage":  currentPage,
+			"PagesCount":   pagesCount,
+			"Top1Username": top1Username,
+			"Top1Balance":  top1Balance,
+			"Top2Username": top2Username,
+			"Top2Balance":  top2Balance,
+			"Top3Username": top3Username,
+			"Top3Balance":  top3Balance,
+			"UsersList":    usersList,
+		})
+	} else {
+		for i := usersPerPage * (currentPage - 1); i < min(usersPerPage*currentPage, int64(len(b.topUsers))); i++ {
+			usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].Balance)
+		}
+		b.mu.RUnlock()
+
+		text = b.deps.dictionary.Text(user.LanguageCode, msgTopUsers, map[string]any{
+			"CurrentPage": currentPage,
+			"PagesCount":  pagesCount,
+			"UsersList":   usersList,
+		})
+	}
+
+	markup := b.paginationKeyboard(user.LanguageCode, currentPage, pagesCount)
+
+	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup, ParseMode: telebot.ModeHTML}); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
 
 	return nil
 }

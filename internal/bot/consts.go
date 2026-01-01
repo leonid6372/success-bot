@@ -1,15 +1,13 @@
 package bot
 
-const (
-	currencyRUB = "₽"
-	currencyUSD = "$"
-)
+const usersPerPage = 15
 
 const (
 	cbkLanguage            = "language"
 	cbkCheckSubscription   = "check_subscription"
 	cbkInstrument          = "instrument"
 	cbkInstrumentsListPage = "instruments_list_page"
+	cbkTopUsersPage        = "top_users_page"
 )
 
 const (
@@ -21,6 +19,8 @@ const (
 	msgLanguage            = "select_language"
 	msgInstrumentsList     = "instruments_list"
 	msgInstrument          = "instrument"
+	msgTopUsersFirstPage   = "top_users_first_page"
+	msgTopUsers            = "top_users"
 )
 
 const (

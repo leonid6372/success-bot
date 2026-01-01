@@ -69,36 +69,7 @@ func (b *Bot) instrumentsListByPageKeyboard(
 	markup := &telebot.ReplyMarkup{}
 	var rows []telebot.Row
 
-	if currentPage == 1 {
-		rows = append(rows, telebot.Row{
-			markup.Data(
-				b.deps.dictionary.Text(lang, btnNextPage),
-				fmt.Sprintf("%s|%d", cbkInstrumentsListPage, currentPage+1),
-			),
-		})
-	}
-
-	if currentPage == pagesCount {
-		rows = append(rows, telebot.Row{
-			markup.Data(
-				b.deps.dictionary.Text(lang, btnPreviousPage),
-				fmt.Sprintf("%s|%d", cbkInstrumentsListPage, currentPage-1),
-			),
-		})
-	}
-
-	if currentPage > 1 && currentPage < pagesCount {
-		rows = append(rows, telebot.Row{
-			markup.Data(
-				b.deps.dictionary.Text(lang, btnPreviousPage),
-				fmt.Sprintf("%s|%d", cbkInstrumentsListPage, currentPage-1),
-			),
-			markup.Data(
-				b.deps.dictionary.Text(lang, btnNextPage),
-				fmt.Sprintf("%s|%d", cbkInstrumentsListPage, currentPage+1),
-			),
-		})
-	}
+	rows = b.addPaginationCbkButtons(rows, lang, cbkInstrumentsListPage, currentPage, pagesCount)
 
 	for i := 0; i < len(instruments); i += 2 {
 		end := min(i+2, len(instruments))
@@ -121,10 +92,10 @@ func (b *Bot) instrumentKeyboard(lang string, info *finam.QuoteResponse) *telebo
 	markup := &telebot.ReplyMarkup{}
 
 	btnBuy := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy, map[string]any{
-		"Price": info.Quote.Ask,
+		"Price": info.Quote.Ask.Float64(),
 	})}
 	btnSold := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSold, map[string]any{
-		"Price": info.Quote.Bid,
+		"Price": info.Quote.Bid.Float64(),
 	})}
 	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
 	btnMainMenu := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnMainMenu)}
@@ -136,5 +107,15 @@ func (b *Bot) instrumentKeyboard(lang string, info *finam.QuoteResponse) *telebo
 
 	markup.Reply(rows...)
 	markup.ResizeKeyboard = true
+	return markup
+}
+
+func (b *Bot) paginationKeyboard(lang string, currentPage, pagesCount int64) *telebot.ReplyMarkup {
+	markup := &telebot.ReplyMarkup{}
+	var rows []telebot.Row
+
+	rows = b.addPaginationCbkButtons(rows, lang, cbkTopUsersPage, currentPage, pagesCount)
+
+	markup.Inline(rows...)
 	return markup
 }

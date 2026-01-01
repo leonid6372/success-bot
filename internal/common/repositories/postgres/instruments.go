@@ -9,9 +9,7 @@ import (
 	"github.com/leonid6372/success-bot/internal/common/domain"
 )
 
-const (
-	instrumentsListPageCount = 10
-)
+const instrumentsListPageCount = 10
 
 type instrumentsRepository struct {
 	psql *pgxpool.Pool
@@ -23,7 +21,7 @@ func NewInstrumentsRepository(pool *pgxpool.Pool) domain.InstrumentsRepository {
 	}
 }
 
-func (ir *instrumentsRepository) GetInstrumentsCount(ctx context.Context) (int64, error) {
+func (ir *instrumentsRepository) GetInstrumentsPagesCount(ctx context.Context) (int64, error) {
 	query := `SELECT COUNT(*) FROM success_bot.instruments`
 	var instrumentsCount int64
 	if err := ir.psql.QueryRow(ctx, query).Scan(&instrumentsCount); err != nil {

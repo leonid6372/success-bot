@@ -3,7 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
-	"log"
+	"sync"
 	"time"
 
 	"github.com/leonid6372/success-bot/internal/common/config"
@@ -12,13 +12,17 @@ import (
 	"github.com/leonid6372/success-bot/pkg/dictionary"
 	"github.com/leonid6372/success-bot/pkg/errs"
 	"github.com/leonid6372/success-bot/pkg/finam"
+	"github.com/leonid6372/success-bot/pkg/log"
 	"gopkg.in/telebot.v4"
 )
 
 type Bot struct {
 	Telebot *telebot.Bot
 	cfg     *config.Bot
-	cache   *cache.Cache
+	cache   *cache.Cache // tgID -> *domain.User
+
+	topUsers []*domain.TopUser // sorted by live-balance descending
+	mu       sync.RWMutex
 
 	deps *Dependencies
 }
@@ -29,7 +33,7 @@ type Dependencies struct {
 	finam      *finam.Client
 	dictionary *dictionary.Dictionary
 
-	userRepository        domain.UsersRepository
+	usersRepository       domain.UsersRepository
 	instrumentsRepository domain.InstrumentsRepository
 }
 
@@ -37,7 +41,7 @@ func New(ctx context.Context,
 	cfg *config.Bot,
 	finam *finam.Client,
 	dictionary *dictionary.Dictionary,
-	userRepository domain.UsersRepository,
+	usersRepository domain.UsersRepository,
 	instrumentsRepository domain.InstrumentsRepository,
 ) (*Bot, error) {
 	b, err := telebot.NewBot(telebot.Settings{
@@ -56,7 +60,7 @@ func New(ctx context.Context,
 			ctx:                   ctx,
 			finam:                 finam,
 			dictionary:            dictionary,
-			userRepository:        userRepository,
+			usersRepository:       usersRepository,
 			instrumentsRepository: instrumentsRepository,
 		},
 	}
@@ -68,6 +72,7 @@ func New(ctx context.Context,
 	bot.setupMiddlewares()
 	bot.setupMessageRoutes()
 	bot.setupCallbackRoutes()
+	go bot.setupTopUsersUpdater()
 
 	return bot, nil
 }
@@ -105,6 +110,7 @@ func (b *Bot) setupMessageRoutes() {
 	for _, lang := range b.cfg.Languages {
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnMainMenu)}, b.mainMenuHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}, b.instrumentsListHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}, b.topUsersHandler)
 		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}, b.faqHandler)
 		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnProfile)}, b.profileHandler)
 		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}, b.enterPromocodeHandler)
@@ -118,6 +124,7 @@ func (b *Bot) setupCallbackRoutes() {
 	callback.Handle(&telebot.Btn{Unique: cbkCheckSubscription}, b.checkSubscriptionHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkInstrumentsListPage}, b.instrumentsListHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkInstrument}, b.instrumentHandler)
+	callback.Handle(&telebot.Btn{Unique: cbkTopUsersPage}, b.topUsersHandler)
 }
 
 func (b *Bot) Start() {
