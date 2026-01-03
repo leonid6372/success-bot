@@ -23,8 +23,8 @@ create table if not exists success_bot.users
 
     balance                 numeric(10, 2)  default 250000  not null,
 
-    created_at              timestamp       default now()   not null,
-    updated_at              timestamp       default now()   not null
+    created_at              timestamptz     default now()   not null,
+    updated_at              timestamptz     default now()   not null
 );
 
 create trigger update_users_updated_at
@@ -37,7 +37,7 @@ create table if not exists success_bot.promocodes (
     available_count         int             default 0       not null,
     value                   varchar(64)                     not null,
     bonus_amount            numeric(10, 2)  default 0       not null,
-    created_at              timestamp       default now()   not null
+    created_at              timestamptz     default now()   not null
 );
 
 create table if not exists success_bot.instruments
@@ -85,7 +85,7 @@ create table if not exists success_bot.operations
     price                   numeric(10, 2)                  not null,
     amount                  numeric(10, 2)                  not null,
 
-    created_at              timestamp       default now()   not null
+    created_at              timestamptz     default now()   not null
 );
 
 create table if not exists success_bot.portfolios
@@ -95,8 +95,8 @@ create table if not exists success_bot.portfolios
     count                   int                             not null,
     average_price           numeric(10, 2)                  not null,
 
-    created_at              timestamp       default now()   not null,
-    updated_at              timestamp       default now()   not null,
+    created_at              timestamptz     default now()   not null,
+    updated_at              timestamptz     default now()   not null,
 
     unique(user_id, instrument_id)
 );
