@@ -41,12 +41,12 @@ func (b *Bot) setupTopUsersUpdater() {
 				continue
 			}
 
-			tickerInfo, err := b.deps.finam.NewQuoteRequest(data.Ticker).Do(b.deps.ctx)
+			instrument, err := b.deps.finam.GetInstrumentPrices(b.deps.ctx, data.Ticker)
 			if err != nil {
 				log.Error("failed to get ticker info", zap.String("ticker", data.Ticker), zap.Error(err))
 			}
 
-			mapTopUsers[data.Username] += tickerInfo.Quote.Last.Float64() * float64(data.Count)
+			mapTopUsers[data.Username] += instrument.Price.Last * float64(data.Count)
 		}
 
 		topUsers := make([]*domain.TopUser, 0, len(mapTopUsers))

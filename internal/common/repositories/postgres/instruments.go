@@ -6,7 +6,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/leonid6372/success-bot/internal/bot"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/errs"
 )
@@ -28,7 +27,7 @@ func (ir *instrumentsRepository) GetInstrumentsPagesCount(ctx context.Context) (
 		return 0, errs.NewStack(err)
 	}
 
-	pagesCount := (instrumentsCount + bot.InstrumentsPerPage - 1) / bot.InstrumentsPerPage
+	pagesCount := (instrumentsCount + domain.InstrumentsPerPage - 1) / domain.InstrumentsPerPage
 
 	return pagesCount, nil
 }
@@ -40,7 +39,7 @@ func (ir *instrumentsRepository) GetInstrumentsByPage(ctx context.Context, page 
 			name
 		FROM success_bot.instruments
 		LIMIT $1 OFFSET $2`
-	rows, err := ir.psql.Query(ctx, query, bot.InstrumentsPerPage, (page-1)*bot.InstrumentsPerPage)
+	rows, err := ir.psql.Query(ctx, query, domain.InstrumentsPerPage, (page-1)*domain.InstrumentsPerPage)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return []*domain.Instrument{}, nil

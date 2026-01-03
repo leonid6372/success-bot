@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/leonid6372/success-bot/internal/boterrs"
@@ -282,21 +283,20 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 			case <-doneCh:
 				return
 			default:
-				info, err := b.deps.finam.NewQuoteRequest(ticker).Do(b.deps.ctx)
+				instrument, err := b.deps.finam.GetInstrumentPrices(b.deps.ctx, ticker)
 				if err != nil {
 					log.Error("failed to get instrument info", zap.Error(err))
 				}
 
 				// Skip if price didn't change
-				if prevPrice == info.Quote.Last.Float64() {
+				if prevPrice == instrument.Price.Last {
 					continue
 				}
 
-				prevPrice = info.Quote.Last.Float64()
-
+				prevPrice = instrument.Price.Last
 				var color string
 
-				if info.Quote.Change.Float64() >= 0 {
+				if instrument.Price.Change >= 0 {
 					color = "🟢"
 				} else {
 					color = "🔴"
@@ -304,10 +304,10 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 				text := b.deps.dictionary.Text(user.LanguageCode, btnLastPrice, map[string]any{
 					"Color": color,
-					"Price": info.Quote.Last.Float64(),
+					"Price": instrument.Price.Last,
 				})
 
-				markup := b.instrumentKeyboard(user.LanguageCode, &info)
+				markup := b.instrumentKeyboard(user.LanguageCode, instrument)
 
 				if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
 					log.Error("failed to send message", zap.Error(err))
@@ -353,7 +353,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 	}
 
 	b.mu.RLock()
-	pagesCount := int64(len(b.topUsers)/UsersPerPage) + 1
+	pagesCount := int64(len(b.topUsers)/domain.UsersPerPage) + 1
 
 	var text, usersList string
 
@@ -385,7 +385,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 			top3Username = b.topUsers[2].Username
 			top3Balance = b.topUsers[2].Balance
 
-			for i := 3; i < min(UsersPerPage, len(b.topUsers)); i++ {
+			for i := 3; i < min(domain.UsersPerPage, len(b.topUsers)); i++ {
 				usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].Balance)
 			}
 			b.mu.RUnlock()
@@ -403,7 +403,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 			"UsersList":    usersList,
 		})
 	} else {
-		for i := UsersPerPage * (currentPage - 1); i < min(UsersPerPage*currentPage, int64(len(b.topUsers))); i++ {
+		for i := domain.UsersPerPage * (currentPage - 1); i < min(domain.UsersPerPage*currentPage, int64(len(b.topUsers))); i++ {
 			usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].Balance)
 		}
 		b.mu.RUnlock()
@@ -415,7 +415,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 		})
 	}
 
-	markup := b.paginationKeyboard(user.LanguageCode, currentPage, pagesCount)
+	markup := b.paginationKeyboard(user.LanguageCode, cbkTopUsersPage, currentPage, pagesCount)
 
 	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup, ParseMode: telebot.ModeHTML}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
@@ -466,6 +466,87 @@ func (b *Bot) inputPromocode(c telebot.Context) error {
 	user.Metadata.InputType = ""
 
 	if err := c.Send(text); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
+
+	return nil
+}
+
+func (b *Bot) operationsHandler(c telebot.Context) error {
+	defer c.Respond()
+
+	ctx := c.Get(ctxContext).(context.Context)
+	user := b.mustUser(c)
+
+	var currentPage int64
+	var err error
+
+	args := c.Args()
+
+	if len(args) == 1 {
+		currentPage, err = strconv.ParseInt(args[0], 10, 64)
+		if err != nil {
+			return errs.NewStack(fmt.Errorf("failed to parse current page: %v", err))
+		}
+	} else {
+		currentPage = 1
+	}
+
+	pagesCount, err := b.deps.operationsRepository.GetOperationsPagesCount(ctx)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get operations pages count: %v", err))
+	}
+
+	operations, err := b.deps.operationsRepository.GetOperationsByPage(ctx, user.ID, currentPage)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get operations by page: %v", err))
+	}
+
+	var text strings.Builder
+
+	text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperations, map[string]any{
+		"CurrentPage": currentPage,
+		"PagesCount":  pagesCount,
+	}))
+
+	for _, op := range operations {
+		switch op.Type {
+		case domain.OperationTypeBuy:
+			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationBuy, map[string]any{
+				"OperationID": op.ID,
+				"Count":       op.Count,
+				"Name":        op.InstrumentName[5:], // cut instrument emoji
+				"Amount":      op.TotalAmount,
+			}))
+
+		case domain.OperationTypeSell:
+			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationSell, map[string]any{
+				"OperationID": op.ID,
+				"Count":       op.Count,
+				"Name":        op.InstrumentName[5:], // cut instrument emoji
+				"Amount":      op.TotalAmount,
+			}))
+
+		case domain.OperationTypeFee:
+			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationFee, map[string]any{
+				"OperationID": op.ParentID,
+				"Amount":      op.TotalAmount,
+			}))
+
+		case domain.OperationTypePromocode:
+			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationPromocode, map[string]any{
+				"Name":   op.InstrumentName,
+				"Amount": op.TotalAmount,
+			}))
+
+		default:
+			log.Error("unknown operation type", zap.String("type", string(op.Type)))
+		}
+	}
+
+	markup := b.paginationKeyboard(user.LanguageCode, cbkOperationsPage, currentPage, pagesCount)
+
+	if err := c.Send(text.String(), &telebot.SendOptions{ReplyMarkup: markup, ParseMode: telebot.ModeHTML}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 

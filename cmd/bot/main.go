@@ -9,10 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leonid6372/success-bot/internal/bot"
+	"github.com/leonid6372/success-bot/internal/common/clients/finam"
 	"github.com/leonid6372/success-bot/internal/common/config"
 	"github.com/leonid6372/success-bot/internal/common/repositories/postgres"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
-	"github.com/leonid6372/success-bot/pkg/finam"
 	"github.com/leonid6372/success-bot/pkg/goosemigrate"
 	"github.com/leonid6372/success-bot/pkg/log"
 	"go.uber.org/zap"
@@ -49,6 +49,7 @@ func main() {
 	userRepository := postgres.NewUsersRepository(pool)
 	instrumentsRepository := postgres.NewInstrumentsRepository(pool)
 	promocodesRepository := postgres.NewPromocodesRepository(pool)
+	operationsRepository := postgres.NewOperationsRepository(pool)
 
 	log.Info("init finam...")
 	finam, err := finam.NewClient(ctx, cfg.Finam.Token, cfg.Finam.AccountID)
@@ -57,7 +58,9 @@ func main() {
 	}
 
 	log.Info("init telebot...")
-	bot, err := bot.New(ctx, &cfg.Bot, finam, dictionary, userRepository, instrumentsRepository, promocodesRepository)
+	bot, err := bot.New(
+		ctx, &cfg.Bot, finam, dictionary, userRepository, instrumentsRepository, promocodesRepository, operationsRepository,
+	)
 	if err != nil {
 		log.Fatal("bot starting failed", zap.Error(err))
 	}

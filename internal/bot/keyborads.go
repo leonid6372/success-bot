@@ -3,7 +3,6 @@ package bot
 import (
 	"fmt"
 
-	"github.com/Ruvad39/go-finam-rest"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"gopkg.in/telebot.v4"
 )
@@ -88,20 +87,20 @@ func (b *Bot) instrumentsListByPageKeyboard(
 	return markup
 }
 
-func (b *Bot) instrumentKeyboard(lang string, info *finam.QuoteResponse) *telebot.ReplyMarkup {
+func (b *Bot) instrumentKeyboard(lang string, instrument *domain.Instrument) *telebot.ReplyMarkup {
 	markup := &telebot.ReplyMarkup{}
 
 	btnBuy := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy, map[string]any{
-		"Price": info.Quote.Ask.Float64(),
+		"Price": instrument.Price.Ask,
 	})}
-	btnSold := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSold, map[string]any{
-		"Price": info.Quote.Bid.Float64(),
+	btnSell := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSell, map[string]any{
+		"Price": instrument.Price.Bid,
 	})}
 	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
 	btnMainMenu := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnMainMenu)}
 
 	rows := []telebot.Row{
-		{btnBuy, btnSold},
+		{btnBuy, btnSell},
 		{btnInstrumentsList, btnMainMenu},
 	}
 
@@ -110,12 +109,11 @@ func (b *Bot) instrumentKeyboard(lang string, info *finam.QuoteResponse) *telebo
 	return markup
 }
 
-func (b *Bot) paginationKeyboard(lang string, currentPage, pagesCount int64) *telebot.ReplyMarkup {
+func (b *Bot) paginationKeyboard(lang string, callback string, currentPage, pagesCount int64) *telebot.ReplyMarkup {
 	markup := &telebot.ReplyMarkup{}
 	var rows []telebot.Row
 
-	rows = b.addPaginationCbkButtons(rows, lang, cbkTopUsersPage, currentPage, pagesCount)
-
+	rows = b.addPaginationCbkButtons(rows, lang, callback, currentPage, pagesCount)
 	markup.Inline(rows...)
 	return markup
 }

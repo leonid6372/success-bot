@@ -76,14 +76,15 @@ insert into success_bot.instruments(ticker, name) values
 create table if not exists success_bot.operations
 (
     id                      bigserial       primary key,
+    parent_id               bigint, -- id of parent operation for fees
 
     user_id                 bigint                          not null,
     instrument_id           bigint                          not null, -- id value from instruments table or promocodes table up to type
-    type                    varchar(16)                     not null, -- e.g., 'buy', 'sold', 'promocode'
+    type                    varchar(16)                     not null, -- e.g., 'buy', 'sell', 'fee', 'promocode'
 
     count                   int                             not null,
     price                   numeric(10, 2)                  not null,
-    amount                  numeric(10, 2)                  not null,
+    total_amount            numeric(10, 2)                  not null,
 
     created_at              timestamptz     default now()   not null
 );

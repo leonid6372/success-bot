@@ -75,7 +75,7 @@ func (pr *promocodesRepository) ApplyPromocode(ctx context.Context, value string
 		return nil, errs.NewStack(err)
 	}
 
-	query = `INSERT INTO success_bot.operations(user_id, instrument_id, type, count, price, amount)
+	query = `INSERT INTO success_bot.operations(user_id, instrument_id, type, count, price, total_amount)
 		VALUES ($1, $2, 'promocode', 1, $3, $3)`
 	if _, err = tx.Exec(ctx, query, userID, promocode.ID, promocode.BonusAmount); err != nil {
 		return nil, errs.NewStack(err)

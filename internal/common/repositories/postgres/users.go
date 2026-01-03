@@ -79,7 +79,7 @@ func (ur *usersRepository) GetUserByID(ctx context.Context, id int64) (*domain.U
 }
 
 func (ur *usersRepository) GetUsersCount(ctx context.Context) (int64, error) {
-	query := `SELECT count(*) FROM success_bot.users;`
+	query := `SELECT count(*) FROM success_bot.users`
 	var usersCount int64
 	if err := ur.psql.QueryRow(ctx, query).Scan(&usersCount); err != nil {
 		return 0, errs.NewStack(err)
@@ -98,7 +98,7 @@ func (ur *usersRepository) GetTopUsersData(ctx context.Context) ([]*domain.TopUs
 		LEFT JOIN success_bot.portfolios p
 			ON u.id = p.user_id
 		LEFT JOIN success_bot.instruments i
-			ON p.instrument_id = i.id;`
+			ON p.instrument_id = i.id`
 	rows, err := ur.psql.Query(ctx, query)
 	if err != nil {
 		return nil, errs.NewStack(err)

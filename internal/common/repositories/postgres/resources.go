@@ -97,3 +97,30 @@ func (p *Promocode) CreateDomain() *domain.Promocode {
 
 	return promocode
 }
+
+type HistoryOperation struct {
+	ID             int64     `db:"id"`
+	ParentID       *int64    `db:"parent_id"`
+	Type           string    `db:"type"`
+	InstrumentName string    `db:"instrument_name"`
+	Count          int64     `db:"count"`
+	TotalAmount    float64   `db:"total_amount"`
+	CreatedAt      time.Time `db:"created_at"`
+}
+
+func (ho *HistoryOperation) CreateDomain() *domain.Operation {
+	operation := &domain.Operation{
+		ID:             ho.ID,
+		Type:           ho.Type,
+		InstrumentName: ho.InstrumentName,
+		Count:          ho.Count,
+		TotalAmount:    ho.TotalAmount,
+		CreatedAt:      ho.CreatedAt,
+	}
+
+	if ho.ParentID != nil {
+		operation.ParentID = *ho.ParentID
+	}
+
+	return operation
+}

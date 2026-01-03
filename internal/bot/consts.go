@@ -1,16 +1,12 @@
 package bot
 
 const (
-	InstrumentsPerPage = 10
-	UsersPerPage       = 15
-)
-
-const (
 	cbkLanguage            = "language"
 	cbkCheckSubscription   = "check_subscription"
 	cbkInstrument          = "instrument"
 	cbkInstrumentsListPage = "instruments_list_page"
 	cbkTopUsersPage        = "top_users_page"
+	cbkOperationsPage      = "operations_page"
 )
 
 const (
@@ -29,6 +25,11 @@ const (
 	msgSuccessfulPromocode  = "successful_promocode"
 	msgPromocodeAlreadyUsed = "promocode_already_used"
 	msgInvalidPromocode     = "invalid_promocode"
+	msgOperations           = "operations"
+	msgOperationBuy         = "operation_buy"
+	msgOperationSell        = "operation_sell"
+	msgOperationFee         = "operation_fee"
+	msgOperationPromocode   = "operation_promocode"
 )
 
 const (
@@ -47,5 +48,5 @@ const (
 	btnPreviousPage      = "button_previous_page"
 	btnLastPrice         = "button_last_price"
 	btnBuy               = "button_buy"
-	btnSold              = "button_sold"
+	btnSell              = "button_sell"
 )
