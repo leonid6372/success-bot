@@ -18,7 +18,13 @@ func (b *Bot) closeInstrument(user *domain.User) {
 
 func (b *Bot) setupTopUsersUpdater() {
 	for {
-		usersCount, topUsersData, err := b.deps.usersRepository.GetTopUsersData(b.deps.ctx)
+		usersCount, err := b.deps.usersRepository.GetUsersCount(b.deps.ctx)
+		if err != nil {
+			log.Error("failed to get users count", zap.Error(err))
+			continue
+		}
+
+		topUsersData, err := b.deps.usersRepository.GetTopUsersData(b.deps.ctx)
 		if err != nil {
 			log.Error("failed to get top users data", zap.Error(err))
 			continue

@@ -5,10 +5,16 @@ import (
 	"time"
 )
 
+const (
+	InputTypePromocode = "promocode"
+	InputTypeTicker    = "ticker"
+)
+
 type UsersRepository interface {
 	CreateUser(ctx context.Context, user *User) error
 	GetUserByID(ctx context.Context, id int64) (*User, error)
-	GetTopUsersData(ctx context.Context) (int64, []*TopUserData, error)
+	GetUsersCount(ctx context.Context) (int64, error)
+	GetTopUsersData(ctx context.Context) ([]*TopUserData, error)
 	// UpdateUserTGData updates username, first name, last name and is_premium fields of the user.
 	UpdateUserTGData(ctx context.Context, user *User) error
 	UpdateUserLanguage(ctx context.Context, userID int64, languageCode string) error
@@ -16,6 +22,7 @@ type UsersRepository interface {
 
 type Metadata struct {
 	InstrumentDone *chan struct{}
+	InputType      string
 }
 
 type User struct {

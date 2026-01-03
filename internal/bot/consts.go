@@ -1,6 +1,9 @@
 package bot
 
-const usersPerPage = 15
+const (
+	InstrumentsPerPage = 10
+	UsersPerPage       = 15
+)
 
 const (
 	cbkLanguage            = "language"
@@ -11,24 +14,29 @@ const (
 )
 
 const (
-	msgDefaultError        = "unknown_error"
-	msgNeedSubscribe       = "need_subscribe"
-	msgStart               = "start"
-	msgSubscriptionSuccess = "subscription_success"
-	msgSubscriptionFailed  = "subscription_failed"
-	msgLanguage            = "select_language"
-	msgInstrumentsList     = "instruments_list"
-	msgInstrument          = "instrument"
-	msgTopUsersFirstPage   = "top_users_first_page"
-	msgTopUsers            = "top_users"
+	msgDefaultError         = "unknown_error"
+	msgNeedSubscribe        = "need_subscribe"
+	msgSubscriptionSuccess  = "subscription_success"
+	msgSubscriptionFailed   = "subscription_failed"
+	msgStart                = "start"
+	msgLanguage             = "select_language"
+	msgMainMenu             = "main_menu"
+	msgInstrumentsList      = "instruments_list"
+	msgInstrument           = "instrument"
+	msgTopUsersFirstPage    = "top_users_first_page"
+	msgTopUsers             = "top_users"
+	msgEnterPromocode       = "enter_promocode"
+	msgSuccessfulPromocode  = "successful_promocode"
+	msgPromocodeAlreadyUsed = "promocode_already_used"
+	msgInvalidPromocode     = "invalid_promocode"
 )
 
 const (
 	btnSubscribe         = "button_subscribe"
 	btnSubscribed        = "button_subscribed"
 	btnLanguage          = "button_language"
-	btnProfile           = "button_profile"
 	btnPortfolio         = "button_portfolio"
+	btnOperations        = "button_operations"
 	btnInstrumentsList   = "button_instruments_list"
 	btnInstrumentsSearch = "button_instruments_search"
 	btnEnterPromocode    = "button_enter_promocode"

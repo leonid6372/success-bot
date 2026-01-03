@@ -2,11 +2,12 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"math/rand/v2"
 	"strconv"
 	"time"
 
+	"github.com/leonid6372/success-bot/internal/boterrs"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
 	"github.com/leonid6372/success-bot/pkg/errs"
@@ -175,7 +176,9 @@ func (b *Bot) mainMenuHandler(c telebot.Context) error {
 		b.closeInstrument(user)
 	}
 
-	if err := c.Send(c.Text(), &telebot.SendOptions{
+	text := b.deps.dictionary.Text(user.LanguageCode, msgMainMenu)
+
+	if err := c.Send(text, &telebot.SendOptions{
 		ReplyMarkup: b.mainMenuKeyboard(user.LanguageCode),
 		ParseMode:   telebot.ModeHTML,
 	}); err != nil {
@@ -268,7 +271,13 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 			return
 		}
 
+		var prevPrice float64
+
 		for {
+			log.Info("ticker price circle")
+
+			time.Sleep(500 * time.Millisecond)
+
 			select {
 			case <-doneCh:
 				return
@@ -278,11 +287,16 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 					log.Error("failed to get instrument info", zap.Error(err))
 				}
 
+				// Skip if price didn't change
+				if prevPrice == info.Quote.Last.Float64() {
+					continue
+				}
+
+				prevPrice = info.Quote.Last.Float64()
+
 				var color string
 
-				n := rand.IntN(2)
-				//if info.Quote.Change.Float64() >= 0 {
-				if n == 0 {
+				if info.Quote.Change.Float64() >= 0 {
 					color = "🟢"
 				} else {
 					color = "🔴"
@@ -299,12 +313,22 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 					log.Error("failed to send message", zap.Error(err))
 				}
 			}
-
-			log.Info("ticker price circle")
-
-			time.Sleep(500 * time.Millisecond)
 		}
 	}(user)
+
+	return nil
+}
+
+func (b *Bot) enterPromocodeHandler(c telebot.Context) error {
+	user := b.mustUser(c)
+
+	user.Metadata.InputType = domain.InputTypePromocode
+
+	text := b.deps.dictionary.Text(user.LanguageCode, msgEnterPromocode)
+
+	if err := c.Send(text); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
 
 	return nil
 }
@@ -329,7 +353,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 	}
 
 	b.mu.RLock()
-	pagesCount := int64(len(b.topUsers)/usersPerPage) + 1
+	pagesCount := int64(len(b.topUsers)/UsersPerPage) + 1
 
 	var text, usersList string
 
@@ -361,7 +385,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 			top3Username = b.topUsers[2].Username
 			top3Balance = b.topUsers[2].Balance
 
-			for i := 3; i < min(usersPerPage, len(b.topUsers)); i++ {
+			for i := 3; i < min(UsersPerPage, len(b.topUsers)); i++ {
 				usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].Balance)
 			}
 			b.mu.RUnlock()
@@ -379,7 +403,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 			"UsersList":    usersList,
 		})
 	} else {
-		for i := usersPerPage * (currentPage - 1); i < min(usersPerPage*currentPage, int64(len(b.topUsers))); i++ {
+		for i := UsersPerPage * (currentPage - 1); i < min(UsersPerPage*currentPage, int64(len(b.topUsers))); i++ {
 			usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].Balance)
 		}
 		b.mu.RUnlock()
@@ -394,6 +418,54 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 	markup := b.paginationKeyboard(user.LanguageCode, currentPage, pagesCount)
 
 	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup, ParseMode: telebot.ModeHTML}); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
+
+	return nil
+}
+
+func (b *Bot) textHandler(c telebot.Context) error {
+	user := b.mustUser(c)
+
+	if user.Metadata.InputType == "" {
+		return b.mainMenuHandler(c)
+	}
+
+	switch user.Metadata.InputType {
+	case domain.InputTypePromocode:
+		return b.inputPromocode(c)
+	// case domain.InputTypeTicker:
+	// return b.inputTicker(c)
+	default:
+		user.Metadata.InputType = ""
+		return c.Send(b.deps.dictionary.Text(user.LanguageCode, msgDefaultError))
+	}
+}
+
+func (b *Bot) inputPromocode(c telebot.Context) error {
+	ctx := c.Get(ctxContext).(context.Context)
+	user := b.mustUser(c)
+	promocodeValue := c.Text()
+
+	var text string
+
+	promocode, err := b.deps.promocodesRepository.ApplyPromocode(ctx, promocodeValue, user.ID)
+	switch {
+	case errors.Is(err, boterrs.ErrInvalidPromocode):
+		text = b.deps.dictionary.Text(user.LanguageCode, msgInvalidPromocode)
+	case errors.Is(err, boterrs.ErrUsedPromocode):
+		text = b.deps.dictionary.Text(user.LanguageCode, msgPromocodeAlreadyUsed)
+	case err == nil:
+		text = b.deps.dictionary.Text(user.LanguageCode, msgSuccessfulPromocode, map[string]any{
+			"Amount": promocode.BonusAmount,
+		})
+	default:
+		return errs.NewStack(fmt.Errorf("failed to apply promocode: %v", err))
+	}
+
+	user.Metadata.InputType = ""
+
+	if err := c.Send(text); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 

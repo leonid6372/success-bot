@@ -77,3 +77,23 @@ func (i *Instrument) CreateDomain() *domain.Instrument {
 
 	return instrument
 }
+
+type Promocode struct {
+	ID             int64     `db:"id"`
+	AvailableCount int64     `db:"available_count"`
+	Value          string    `db:"value"`
+	BonusAmount    float64   `db:"bonus_amount"`
+	CreatedAt      time.Time `db:"created_at"`
+}
+
+func (p *Promocode) CreateDomain() *domain.Promocode {
+	promocode := &domain.Promocode{
+		ID:             p.ID,
+		AvailableCount: p.AvailableCount,
+		Value:          p.Value,
+		BonusAmount:    p.BonusAmount,
+		CreatedAt:      p.CreatedAt,
+	}
+
+	return promocode
+}

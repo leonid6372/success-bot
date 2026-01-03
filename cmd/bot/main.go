@@ -48,6 +48,7 @@ func main() {
 
 	userRepository := postgres.NewUsersRepository(pool)
 	instrumentsRepository := postgres.NewInstrumentsRepository(pool)
+	promocodesRepository := postgres.NewPromocodesRepository(pool)
 
 	log.Info("init finam...")
 	finam, err := finam.NewClient(ctx, cfg.Finam.Token, cfg.Finam.AccountID)
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	log.Info("init telebot...")
-	bot, err := bot.New(ctx, &cfg.Bot, finam, dictionary, userRepository, instrumentsRepository)
+	bot, err := bot.New(ctx, &cfg.Bot, finam, dictionary, userRepository, instrumentsRepository, promocodesRepository)
 	if err != nil {
 		log.Fatal("bot starting failed", zap.Error(err))
 	}

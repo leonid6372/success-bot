@@ -72,29 +72,24 @@ func (ur *usersRepository) GetUserByID(ctx context.Context, id int64) (*domain.U
 			return nil, nil
 		}
 
-		return nil, err
+		return nil, errs.NewStack(err)
 	}
 
 	return user.CreateDomain(), nil
 }
 
-func (ur *usersRepository) GetTopUsersData(ctx context.Context) (int64, []*domain.TopUserData, error) {
-	tx, err := ur.psql.Begin(ctx)
-	if err != nil {
-		return 0, nil, errs.NewStack(err)
-	}
-
+func (ur *usersRepository) GetUsersCount(ctx context.Context) (int64, error) {
 	query := `SELECT count(*) FROM success_bot.users;`
 	var usersCount int64
 	if err := ur.psql.QueryRow(ctx, query).Scan(&usersCount); err != nil {
-		return 0, nil, err
+		return 0, errs.NewStack(err)
 	}
 
-	if usersCount == 0 {
-		return 0, []*domain.TopUserData{}, nil
-	}
+	return usersCount, nil
+}
 
-	query = `SELECT
+func (ur *usersRepository) GetTopUsersData(ctx context.Context) ([]*domain.TopUserData, error) {
+	query := `SELECT
 			u.username,
 			u.balance,
 			i.ticker,
@@ -104,9 +99,9 @@ func (ur *usersRepository) GetTopUsersData(ctx context.Context) (int64, []*domai
 			ON u.id = p.user_id
 		LEFT JOIN success_bot.instruments i
 			ON p.instrument_id = i.id;`
-	rows, err := tx.Query(ctx, query)
+	rows, err := ur.psql.Query(ctx, query)
 	if err != nil {
-		return 0, nil, err
+		return nil, errs.NewStack(err)
 	}
 	defer rows.Close()
 
@@ -119,13 +114,13 @@ func (ur *usersRepository) GetTopUsersData(ctx context.Context) (int64, []*domai
 			&data.Ticker,
 			&data.Count,
 		); err != nil {
-			return 0, nil, err
+			return nil, errs.NewStack(err)
 		}
 
 		topUsersData = append(topUsersData, data.CreateDomain())
 	}
 
-	return usersCount, topUsersData, nil
+	return topUsersData, nil
 }
 
 // UpdateUserTGData updates username, first name, last name and is_premium fields of the user.

@@ -35,6 +35,7 @@ type Dependencies struct {
 
 	usersRepository       domain.UsersRepository
 	instrumentsRepository domain.InstrumentsRepository
+	promocodesRepository  domain.PromocodesRepository
 }
 
 func New(ctx context.Context,
@@ -43,6 +44,7 @@ func New(ctx context.Context,
 	dictionary *dictionary.Dictionary,
 	usersRepository domain.UsersRepository,
 	instrumentsRepository domain.InstrumentsRepository,
+	promocodesRepository domain.PromocodesRepository,
 ) (*Bot, error) {
 	b, err := telebot.NewBot(telebot.Settings{
 		Token:  cfg.APIKey,
@@ -62,6 +64,7 @@ func New(ctx context.Context,
 			dictionary:            dictionary,
 			usersRepository:       usersRepository,
 			instrumentsRepository: instrumentsRepository,
+			promocodesRepository:  promocodesRepository,
 		},
 	}
 
@@ -106,14 +109,15 @@ func (b *Bot) setupMessageRoutes() {
 
 	message.Handle("/start", b.startHandler)
 	message.Handle("/language", b.selectLanguageHandler)
+	message.Handle(telebot.OnText, b.textHandler)
 
 	for _, lang := range b.cfg.Languages {
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnMainMenu)}, b.mainMenuHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}, b.instrumentsListHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}, b.enterPromocodeHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}, b.topUsersHandler)
 		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}, b.faqHandler)
 		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnProfile)}, b.profileHandler)
-		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}, b.enterPromocodeHandler)
 	}
 }
 
@@ -135,13 +139,6 @@ func (b *Bot) Stop() {
 	b.Telebot.Stop()
 }
 
-// func (b *Bot) GetUser(c telebot.Context) *domain.User {
-// 	if user, ok := c.Get(ctxUser).(*domain.User); ok {
-// 		return user
-// 	}
-// 	return nil
-// }
-
 func (b *Bot) mustUser(c telebot.Context) *domain.User {
 	tgID := c.Sender().ID
 
@@ -149,11 +146,6 @@ func (b *Bot) mustUser(c telebot.Context) *domain.User {
 	if !ok {
 		log.Fatal("user not found in cache")
 	}
-
-	// usr := b.GetUser(c)
-	// if usr == nil {
-	// 	log.Fatal("user not found in context")
-	// }
 
 	return user.(*domain.User)
 }

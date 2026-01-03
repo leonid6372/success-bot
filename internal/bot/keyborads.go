@@ -11,8 +11,8 @@ import (
 func (b *Bot) mainMenuKeyboard(lang string) *telebot.ReplyMarkup {
 	markup := &telebot.ReplyMarkup{}
 
-	btnProfile := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnProfile)}
 	btnPortfolio := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}
+	btnOperations := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnOperations)}
 	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
 	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsSearch)}
 	btnEnterPromocode := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}
@@ -20,7 +20,7 @@ func (b *Bot) mainMenuKeyboard(lang string) *telebot.ReplyMarkup {
 	btnTopUsers := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}
 
 	rows := []telebot.Row{
-		{btnProfile, btnPortfolio},
+		{btnPortfolio, btnOperations},
 		{btnInstrumentsList, btnInstrumentsSearch},
 		{btnEnterPromocode, btnFAQ},
 		{btnTopUsers},
