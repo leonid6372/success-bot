@@ -62,13 +62,38 @@ func (b *Bot) languagesKeyboard() *telebot.ReplyMarkup {
 	return markup
 }
 
+func (b *Bot) portfolioInstrumentsListByPageKeyboard(
+	lang string, instruments []*domain.UserInstrument, currentPage, pagesCount int64,
+) *telebot.ReplyMarkup {
+	markup := &telebot.ReplyMarkup{}
+	var rows []telebot.Row
+
+	rows = b.addPaginationCbkButtons(rows, lang, cbkPortfolioPage, currentPage, pagesCount)
+
+	for _, instrument := range instruments {
+		text := b.deps.dictionary.Text(lang, btnPortfolioInstrument, map[string]any{
+			"Name":              instrument.Name,
+			"Count":             instrument.Count,
+			"AvgPrice":          instrument.AvgPrice,
+			"PercentDifference": fmt.Sprintf("%.2f", instrument.Last/instrument.AvgPrice*100-100),
+		})
+		callbackData := fmt.Sprintf("%s|%s", cbkInstrument, instrument.Ticker)
+
+		btn := markup.Data(text, callbackData)
+		rows = append(rows, telebot.Row{btn})
+	}
+
+	markup.Inline(rows...)
+	return markup
+}
+
 func (b *Bot) instrumentsListByPageKeyboard(
 	lang string, instruments []*domain.Instrument, currentPage, pagesCount int64,
 ) *telebot.ReplyMarkup {
 	markup := &telebot.ReplyMarkup{}
 	var rows []telebot.Row
 
-	rows = b.addPaginationCbkButtons(rows, lang, cbkInstrumentsListPage, currentPage, pagesCount)
+	rows = b.addPaginationCbkButtons(rows, lang, cbkInstrumentsPage, currentPage, pagesCount)
 
 	for i := 0; i < len(instruments); i += 2 {
 		end := min(i+2, len(instruments))
@@ -91,17 +116,20 @@ func (b *Bot) instrumentKeyboard(lang string, instrument *domain.Instrument) *te
 	markup := &telebot.ReplyMarkup{}
 
 	btnBuy := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy, map[string]any{
-		"Price": instrument.Price.Ask,
+		"Price": instrument.Ask,
 	})}
 	btnSell := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSell, map[string]any{
-		"Price": instrument.Price.Bid,
+		"Price": instrument.Bid,
 	})}
+	btnPortfolio := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}
 	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
+	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsSearch)}
 	btnMainMenu := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnMainMenu)}
 
 	rows := []telebot.Row{
 		{btnBuy, btnSell},
-		{btnInstrumentsList, btnMainMenu},
+		{btnPortfolio, btnInstrumentsList},
+		{btnMainMenu, btnInstrumentsSearch},
 	}
 
 	markup.Reply(rows...)

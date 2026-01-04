@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -189,6 +188,66 @@ func (b *Bot) mainMenuHandler(c telebot.Context) error {
 	return nil
 }
 
+func (b *Bot) portfolioHandler(c telebot.Context) error {
+	defer c.Respond()
+
+	ctx := c.Get(ctxContext).(context.Context)
+	user := b.mustUser(c)
+
+	if user.Metadata.InstrumentDone != nil {
+		b.closeInstrument(user)
+	}
+
+	currentPage, err := b.getCurrentPage(c)
+	if err != nil {
+		return errs.NewStack(err)
+	}
+
+	pagesCount, err := b.deps.portfoliosRepository.GetUserPortfolioPagesCount(ctx, user.ID)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get portfolio pages count: %v", err))
+	}
+
+	instruments, err := b.deps.portfoliosRepository.GetUserPortfolioByPage(ctx, user.ID, currentPage)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get user portfolio by page: %v", err))
+	}
+
+	var text string
+
+	if len(instruments) == 0 {
+		text = b.deps.dictionary.Text(user.LanguageCode, msgEmptyPortfolio, map[string]any{
+			"AvailableBalance": user.AvailableBalance,
+		})
+	} else {
+		text = b.deps.dictionary.Text(user.LanguageCode, msgPortfolio, map[string]any{
+			"CurrentPage":      currentPage,
+			"PagesCount":       pagesCount,
+			"AvailableBalance": user.AvailableBalance,
+			"BlockedBalance":   user.BlockedBalance,
+		})
+	}
+
+	for _, instrument := range instruments {
+		price, err := b.deps.finam.GetInstrumentPrices(ctx, instrument.Ticker)
+		if err != nil {
+			return errs.NewStack(fmt.Errorf("failed to get instrument prices: %v", err))
+		}
+
+		instrument.InstrumentPrices = price.InstrumentPrices
+	}
+
+	markup := b.portfolioInstrumentsListByPageKeyboard(
+		user.LanguageCode, instruments, currentPage, pagesCount,
+	)
+
+	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
+
+	return nil
+}
+
 func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 	defer c.Respond()
 
@@ -199,18 +258,9 @@ func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 		b.closeInstrument(user)
 	}
 
-	var currentPage int64
-	var err error
-
-	args := c.Args()
-
-	if len(args) == 1 {
-		currentPage, err = strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			return errs.NewStack(fmt.Errorf("failed to parse current page: %v", err))
-		}
-	} else {
-		currentPage = 1
+	currentPage, err := b.getCurrentPage(c)
+	if err != nil {
+		return errs.NewStack(err)
 	}
 
 	pagesCount, err := b.deps.instrumentsRepository.GetInstrumentsPagesCount(ctx)
@@ -262,9 +312,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 	go func(user *domain.User) {
 		text := b.deps.dictionary.Text(user.LanguageCode, msgInstrument, map[string]any{
-			"InstrumentTicker":      ticker,
-			"ButtonInstrumentsList": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentsList),
-			"ButtonMainMenu":        b.deps.dictionary.Text(user.LanguageCode, btnMainMenu),
+			"InstrumentTicker": ticker,
 		})
 
 		if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
@@ -283,20 +331,20 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 			case <-doneCh:
 				return
 			default:
-				instrument, err := b.deps.finam.GetInstrumentPrices(b.deps.ctx, ticker)
+				instrument, err := b.deps.finam.GetInstrumentPrices(b.ctx, ticker)
 				if err != nil {
 					log.Error("failed to get instrument info", zap.Error(err))
 				}
 
 				// Skip if price didn't change
-				if prevPrice == instrument.Price.Last {
+				if prevPrice == instrument.Last {
 					continue
 				}
 
-				prevPrice = instrument.Price.Last
+				prevPrice = instrument.Last
 				var color string
 
-				if instrument.Price.Change >= 0 {
+				if instrument.Change >= 0 {
 					color = "🟢"
 				} else {
 					color = "🔴"
@@ -304,7 +352,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 				text := b.deps.dictionary.Text(user.LanguageCode, btnLastPrice, map[string]any{
 					"Color": color,
-					"Price": instrument.Price.Last,
+					"Price": instrument.Last,
 				})
 
 				markup := b.instrumentKeyboard(user.LanguageCode, instrument)
@@ -338,18 +386,9 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 
 	user := b.mustUser(c)
 
-	var currentPage int64
-	var err error
-
-	args := c.Args()
-
-	if len(args) == 1 {
-		currentPage, err = strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			return errs.NewStack(fmt.Errorf("failed to parse current page: %v", err))
-		}
-	} else {
-		currentPage = 1
+	currentPage, err := b.getCurrentPage(c)
+	if err != nil {
+		return errs.NewStack(err)
 	}
 
 	b.mu.RLock()
@@ -364,29 +403,29 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 		switch len(b.topUsers) {
 		case 1:
 			top1Username = b.topUsers[0].Username
-			top1Balance = b.topUsers[0].Balance
+			top1Balance = b.topUsers[0].TotalBalance
 		case 2:
 			top1Username = b.topUsers[0].Username
-			top1Balance = b.topUsers[0].Balance
+			top1Balance = b.topUsers[0].TotalBalance
 			top2Username = b.topUsers[1].Username
-			top2Balance = b.topUsers[1].Balance
+			top2Balance = b.topUsers[1].TotalBalance
 		case 3:
 			top1Username = b.topUsers[0].Username
-			top1Balance = b.topUsers[0].Balance
+			top1Balance = b.topUsers[0].TotalBalance
 			top2Username = b.topUsers[1].Username
-			top2Balance = b.topUsers[1].Balance
+			top2Balance = b.topUsers[1].TotalBalance
 			top3Username = b.topUsers[2].Username
-			top3Balance = b.topUsers[2].Balance
+			top3Balance = b.topUsers[2].TotalBalance
 		default:
 			top1Username = b.topUsers[0].Username
-			top1Balance = b.topUsers[0].Balance
+			top1Balance = b.topUsers[0].TotalBalance
 			top2Username = b.topUsers[1].Username
-			top2Balance = b.topUsers[1].Balance
+			top2Balance = b.topUsers[1].TotalBalance
 			top3Username = b.topUsers[2].Username
-			top3Balance = b.topUsers[2].Balance
+			top3Balance = b.topUsers[2].TotalBalance
 
 			for i := 3; i < min(domain.UsersPerPage, len(b.topUsers)); i++ {
-				usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].Balance)
+				usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].TotalBalance)
 			}
 			b.mu.RUnlock()
 		}
@@ -404,7 +443,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 		})
 	} else {
 		for i := domain.UsersPerPage * (currentPage - 1); i < min(domain.UsersPerPage*currentPage, int64(len(b.topUsers))); i++ {
-			usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].Balance)
+			usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].TotalBalance)
 		}
 		b.mu.RUnlock()
 
@@ -478,18 +517,9 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 	ctx := c.Get(ctxContext).(context.Context)
 	user := b.mustUser(c)
 
-	var currentPage int64
-	var err error
-
-	args := c.Args()
-
-	if len(args) == 1 {
-		currentPage, err = strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			return errs.NewStack(fmt.Errorf("failed to parse current page: %v", err))
-		}
-	} else {
-		currentPage = 1
+	currentPage, err := b.getCurrentPage(c)
+	if err != nil {
+		return errs.NewStack(err)
 	}
 
 	pagesCount, err := b.deps.operationsRepository.GetOperationsPagesCount(ctx)
@@ -504,10 +534,14 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 
 	var text strings.Builder
 
-	text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperations, map[string]any{
-		"CurrentPage": currentPage,
-		"PagesCount":  pagesCount,
-	}))
+	if len(operations) == 0 {
+		text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgNoOperations))
+	} else {
+		text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperations, map[string]any{
+			"CurrentPage": currentPage,
+			"PagesCount":  pagesCount,
+		}))
+	}
 
 	for _, op := range operations {
 		switch op.Type {

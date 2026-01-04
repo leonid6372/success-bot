@@ -18,6 +18,11 @@ type UsersRepository interface {
 	// UpdateUserTGData updates username, first name, last name and is_premium fields of the user.
 	UpdateUserTGData(ctx context.Context, user *User) error
 	UpdateUserLanguage(ctx context.Context, userID int64, languageCode string) error
+	// UpdateUserBalancesAndMarginCall updates available_balance and margin_call by gotten values.
+	// Set blocked_balance = blocked_balance - blockedBalanceDelta. Nil values will be ignored to update.
+	UpdateUserBalancesAndMarginCall(
+		ctx context.Context, userID int64, availableBalance float64, blockedBalanceDelta *float64, marginCall *bool,
+	) error
 }
 
 type Metadata struct {
@@ -34,7 +39,9 @@ type User struct {
 	LanguageCode string `json:"language_code"`
 	IsPremium    bool   `json:"is_premium"`
 
-	Balance float64 `json:"balance"`
+	AvailableBalance float64 `json:"available_balance"`
+	BlockedBalance   float64 `json:"blocked_balance"`
+	MarginCall       bool    `json:"margin_call"`
 
 	Metadata Metadata `json:"metadata"`
 
@@ -43,8 +50,13 @@ type User struct {
 }
 
 type TopUser struct {
-	Username string  `json:"username"`
-	Balance  float64 `json:"balance"`
+	ID           int64  `json:"id"`
+	Username     string `json:"username"`
+	LanguageCode string `json:"language_code"`
+
+	AvailableBalance float64 `json:"available_balance"`
+	BlockedBalance   float64 `json:"blocked_balance"`
+	TotalBalance     float64 `json:"total_balance"`
 }
 
 type TopUserData struct {

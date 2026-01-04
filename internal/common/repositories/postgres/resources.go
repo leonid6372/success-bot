@@ -15,7 +15,9 @@ type User struct {
 	LanguageCode string `db:"language_code"`
 	IsPremium    bool   `db:"is_premium"`
 
-	Balance float64 `db:"balance"`
+	AvailableBalance float64 `db:"available_balance"`
+	BlockedBalance   float64 `db:"blocked_balance"`
+	MarginCall       bool    `db:"margin_call"`
 
 	UpdatedAt time.Time `db:"updated_at"`
 	CreatedAt time.Time `db:"created_at"`
@@ -23,32 +25,40 @@ type User struct {
 
 func (u *User) CreateDomain() *domain.User {
 	user := &domain.User{
-		ID:           u.ID,
-		Username:     u.Username,
-		FirstName:    u.FirstName,
-		LastName:     u.LastName,
-		LanguageCode: u.LanguageCode,
-		IsPremium:    u.IsPremium,
-		Balance:      u.Balance,
-		CreatedAt:    u.CreatedAt,
-		UpdatedAt:    u.UpdatedAt,
+		ID:               u.ID,
+		Username:         u.Username,
+		FirstName:        u.FirstName,
+		LastName:         u.LastName,
+		LanguageCode:     u.LanguageCode,
+		IsPremium:        u.IsPremium,
+		AvailableBalance: u.AvailableBalance,
+		BlockedBalance:   u.BlockedBalance,
+		MarginCall:       u.MarginCall,
+		CreatedAt:        u.CreatedAt,
+		UpdatedAt:        u.UpdatedAt,
 	}
 
 	return user
 }
 
 type TopUserData struct {
-	Username string  `db:"username"`
-	Balance  float64 `db:"balance"`
-	Ticker   *string `db:"ticker"`
-	Count    *int64  `db:"count"`
+	ID               int64   `db:"id"`
+	Username         string  `db:"username"`
+	LanguageCode     string  `db:"language_code"`
+	AvailableBalance float64 `db:"available_balance"`
+	BlockedBalance   float64 `db:"blocked_balance"`
+	Ticker           *string `db:"ticker"`
+	Count            *int64  `db:"count"`
 }
 
 func (d *TopUserData) CreateDomain() *domain.TopUserData {
 	data := &domain.TopUserData{
 		TopUser: domain.TopUser{
-			Username: d.Username,
-			Balance:  d.Balance,
+			ID:               d.ID,
+			Username:         d.Username,
+			LanguageCode:     d.LanguageCode,
+			AvailableBalance: d.AvailableBalance,
+			BlockedBalance:   d.BlockedBalance,
 		},
 	}
 
@@ -70,9 +80,11 @@ type Instrument struct {
 
 func (i *Instrument) CreateDomain() *domain.Instrument {
 	instrument := &domain.Instrument{
-		ID:     i.ID,
-		Ticker: i.Ticker,
-		Name:   i.Name,
+		InstrumentIdentifiers: domain.InstrumentIdentifiers{
+			ID:     i.ID,
+			Ticker: i.Ticker,
+			Name:   i.Name,
+		},
 	}
 
 	return instrument
@@ -123,4 +135,30 @@ func (ho *HistoryOperation) CreateDomain() *domain.Operation {
 	}
 
 	return operation
+}
+
+type UserInstrument struct {
+	UserID           int64     `db:"user_id"`
+	InstrumentTicker string    `db:"instrument_ticker"`
+	InstrumentName   string    `db:"instrument_name"`
+	Count            int64     `db:"count"`
+	AvgPrice         float64   `db:"average_price"`
+	CreatedAt        time.Time `db:"created_at"`
+	UpdatedAt        time.Time `db:"updated_at"`
+}
+
+func (ui *UserInstrument) CreateDomain() *domain.UserInstrument {
+	userInstrument := &domain.UserInstrument{
+		UserID: ui.UserID,
+		InstrumentIdentifiers: domain.InstrumentIdentifiers{
+			Ticker: ui.InstrumentTicker,
+			Name:   ui.InstrumentName,
+		},
+		Count:     ui.Count,
+		AvgPrice:  ui.AvgPrice,
+		CreatedAt: ui.CreatedAt,
+		UpdatedAt: ui.UpdatedAt,
+	}
+
+	return userInstrument
 }

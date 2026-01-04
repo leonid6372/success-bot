@@ -27,7 +27,7 @@ func (ir *instrumentsRepository) GetInstrumentsPagesCount(ctx context.Context) (
 		return 0, errs.NewStack(err)
 	}
 
-	pagesCount := (instrumentsCount + domain.InstrumentsPerPage - 1) / domain.InstrumentsPerPage
+	pagesCount := (instrumentsCount + domain.ReviewInstrumentsPerPage - 1) / domain.ReviewInstrumentsPerPage
 
 	return pagesCount, nil
 }
@@ -38,8 +38,9 @@ func (ir *instrumentsRepository) GetInstrumentsByPage(ctx context.Context, page 
 			ticker,
 			name
 		FROM success_bot.instruments
+		ORDER BY name ASC
 		LIMIT $1 OFFSET $2`
-	rows, err := ir.psql.Query(ctx, query, domain.InstrumentsPerPage, (page-1)*domain.InstrumentsPerPage)
+	rows, err := ir.psql.Query(ctx, query, domain.ReviewInstrumentsPerPage, (page-1)*domain.ReviewInstrumentsPerPage)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return []*domain.Instrument{}, nil

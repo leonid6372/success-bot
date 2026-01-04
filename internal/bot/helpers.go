@@ -3,63 +3,102 @@ package bot
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/leonid6372/success-bot/internal/common/domain"
+	"github.com/leonid6372/success-bot/pkg/errs"
 	"github.com/leonid6372/success-bot/pkg/log"
 	"go.uber.org/zap"
 	"gopkg.in/telebot.v4"
 )
 
-func (b *Bot) closeInstrument(user *domain.User) {
-	close(*user.Metadata.InstrumentDone)
-	user.Metadata.InstrumentDone = nil
-}
-
-func (b *Bot) setupTopUsersUpdater() {
+func (b *Bot) setupBalancesAndTopUpdater() {
 	for {
-		usersCount, err := b.deps.usersRepository.GetUsersCount(b.deps.ctx)
+		usersCount, err := b.deps.usersRepository.GetUsersCount(b.ctx)
 		if err != nil {
 			log.Error("failed to get users count", zap.Error(err))
 			continue
 		}
 
-		topUsersData, err := b.deps.usersRepository.GetTopUsersData(b.deps.ctx)
+		usersInstrumentsCount, err := b.deps.portfoliosRepository.GetUsersInstrumentsCount(b.ctx)
+		if err != nil {
+			log.Error("failed to get users instruments count", zap.Error(err))
+			continue
+		}
+
+		instruments := make(map[string]*domain.Instrument, usersInstrumentsCount)
+
+		topUsersData, err := b.deps.usersRepository.GetTopUsersData(b.ctx)
 		if err != nil {
 			log.Error("failed to get top users data", zap.Error(err))
 			continue
 		}
 
-		mapTopUsers := make(map[string]float64, usersCount)
+		mapTopUsers := make(map[string]*domain.TopUser, usersCount)
 
 		for _, data := range topUsersData {
-			if _, ok := mapTopUsers[data.Username]; !ok {
-				mapTopUsers[data.Username] = data.Balance
-			}
-
 			if data.Ticker == "" {
 				continue
 			}
 
-			instrument, err := b.deps.finam.GetInstrumentPrices(b.deps.ctx, data.Ticker)
-			if err != nil {
-				log.Error("failed to get ticker info", zap.String("ticker", data.Ticker), zap.Error(err))
+			if _, ok := instruments[data.Ticker]; !ok {
+				instrument, err := b.deps.finam.GetInstrumentPrices(b.ctx, data.Ticker)
+				if err != nil {
+					log.Error("failed to get ticker info", zap.String("ticker", data.Ticker), zap.Error(err))
+				}
+
+				instruments[data.Ticker] = instrument
 			}
 
-			mapTopUsers[data.Username] += instrument.Price.Last * float64(data.Count)
+			if data.Count >= 0 {
+				mapTopUsers[data.Username].TotalBalance += instruments[data.Ticker].Last * float64(data.Count)
+				continue
+			}
+
+			mapTopUsers[data.Username].BlockedBalance +=
+				instruments[data.Ticker].Last * float64(data.Count) * 0.5 // 50% guarantee coverage
 		}
 
 		topUsers := make([]*domain.TopUser, 0, len(mapTopUsers))
-		for username, balance := range mapTopUsers {
-			topUsers = append(topUsers, &domain.TopUser{
-				Username: username,
-				Balance:  balance,
-			})
+		for _, topUser := range mapTopUsers {
+			topUser.AvailableBalance += topUser.BlockedBalance
+
+			marginCall := false
+			if topUser.AvailableBalance < 0 {
+				marginCall = true
+
+				b.Telebot.Send(
+					&telebot.User{ID: topUser.ID},
+					b.deps.dictionary.Text(topUser.LanguageCode, msgMarginCall),
+					&telebot.SendOptions{ParseMode: telebot.ModeHTML},
+				)
+			}
+
+			topUser.TotalBalance += topUser.AvailableBalance + topUser.BlockedBalance
+
+			topUsers = append(topUsers, topUser)
+
+			// Update data in repository
+			if err := b.deps.usersRepository.UpdateUserBalancesAndMarginCall(
+				b.ctx, topUser.ID, topUser.AvailableBalance, &topUser.BlockedBalance, &marginCall,
+			); err != nil {
+				log.Error("failed to update user balances and margin call", zap.Int64("user_id", topUser.ID), zap.Error(err))
+			}
+
+			// Update data in cache
+			rawUser, ok := b.cache.Get(topUser.ID)
+			if ok {
+				user := rawUser.(*domain.User)
+				user.AvailableBalance = topUser.AvailableBalance
+				user.BlockedBalance = topUser.BlockedBalance
+				user.MarginCall = marginCall
+			}
 		}
 
-		// sort by balance descending
+		// Sort by balance descending
 		sort.Slice(topUsers, func(i, j int) bool {
-			return topUsers[i].Balance > topUsers[j].Balance
+			return topUsers[i].TotalBalance > topUsers[j].TotalBalance
 		})
 
 		b.mu.Lock()
@@ -69,6 +108,26 @@ func (b *Bot) setupTopUsersUpdater() {
 
 		time.Sleep(5 * time.Minute)
 	}
+}
+
+func (b *Bot) closeInstrument(user *domain.User) {
+	close(*user.Metadata.InstrumentDone)
+	user.Metadata.InstrumentDone = nil
+}
+
+func (b *Bot) getCurrentPage(c telebot.Context) (int64, error) {
+	args := c.Args()
+
+	if len(args) == 1 {
+		currentPage, err := strconv.ParseInt(args[0], 10, 64)
+		if err != nil {
+			return 0, errs.NewStack(fmt.Errorf("failed to parse current page: %v", err))
+		}
+
+		return currentPage, nil
+	}
+
+	return 1, nil
 }
 
 func (b *Bot) addPaginationCbkButtons(

@@ -11,8 +11,10 @@ type getInstrumentResponse struct {
 
 func (res *getInstrumentResponse) CreateDomain() *domain.Instrument {
 	return &domain.Instrument{
-		Ticker: res.Symbol,
-		Price: domain.Price{
+		InstrumentIdentifiers: domain.InstrumentIdentifiers{
+			Ticker: res.Quote.Symbol,
+		},
+		InstrumentPrices: domain.InstrumentPrices{
 			Last:   res.Quote.Last.Float64(),
 			Bid:    res.Quote.Bid.Float64(),
 			Ask:    res.Quote.Ask.Float64(),

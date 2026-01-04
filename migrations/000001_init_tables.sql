@@ -21,7 +21,9 @@ create table if not exists success_bot.users
     language_code           varchar(2)      default 'en'    not null,
     is_premium              boolean         default false   not null,
 
-    balance                 numeric(10, 2)  default 250000  not null,
+    available_balance       numeric(10, 2)  default 250000  not null,
+    blocked_balance         numeric(10, 2)  default 0       not null,
+    margin_call             boolean         default false   not null,
 
     created_at              timestamptz     default now()   not null,
     updated_at              timestamptz     default now()   not null
@@ -89,7 +91,7 @@ create table if not exists success_bot.operations
     created_at              timestamptz     default now()   not null
 );
 
-create table if not exists success_bot.portfolios
+create table if not exists success_bot.users_instruments
 (
     user_id                 bigint                          not null,
     instrument_id           bigint                          not null,
@@ -102,8 +104,8 @@ create table if not exists success_bot.portfolios
     unique(user_id, instrument_id)
 );
 
-create trigger update_portfolios_updated_at
-    before update on success_bot.portfolios
+create trigger update_users_instruments_updated_at
+    before update on success_bot.users_instruments
     for each row
     execute function success_bot.update_updated_at();
 
@@ -112,7 +114,7 @@ create trigger update_portfolios_updated_at
 -- +goose Down
 -- +goose StatementBegin
 
-drop table if exists success_bot.portfolios;
+drop table if exists success_bot.users_instruments;
 drop table if exists success_bot.operations;
 drop table if exists success_bot.instruments;
 drop table if exists success_bot.promocodes;

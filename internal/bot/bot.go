@@ -18,8 +18,11 @@ import (
 
 type Bot struct {
 	Telebot *telebot.Bot
-	cfg     *config.Bot
-	cache   *cache.Cache // tgID -> *domain.User
+
+	cfg *config.Bot
+	ctx context.Context
+
+	cache *cache.Cache // tgID -> *domain.User
 
 	topUsers []*domain.TopUser // sorted by live-balance descending
 	mu       sync.RWMutex
@@ -28,8 +31,6 @@ type Bot struct {
 }
 
 type Dependencies struct {
-	ctx context.Context
-
 	finam      *finam.Client
 	dictionary *dictionary.Dictionary
 
@@ -37,6 +38,7 @@ type Dependencies struct {
 	instrumentsRepository domain.InstrumentsRepository
 	promocodesRepository  domain.PromocodesRepository
 	operationsRepository  domain.OperationsRepository
+	portfoliosRepository  domain.PortfolioRepository
 }
 
 func New(ctx context.Context,
@@ -47,6 +49,7 @@ func New(ctx context.Context,
 	instrumentsRepository domain.InstrumentsRepository,
 	promocodesRepository domain.PromocodesRepository,
 	operationsRepository domain.OperationsRepository,
+	portfoliosRepository domain.PortfolioRepository,
 ) (*Bot, error) {
 	b, err := telebot.NewBot(telebot.Settings{
 		Token:  cfg.APIKey,
@@ -59,15 +62,16 @@ func New(ctx context.Context,
 	bot := &Bot{
 		Telebot: b,
 		cfg:     cfg,
+		ctx:     ctx,
 		cache:   cache.New(16*time.Minute, 8*time.Minute),
 		deps: &Dependencies{
-			ctx:                   ctx,
 			finam:                 finam,
 			dictionary:            dictionary,
 			usersRepository:       usersRepository,
 			instrumentsRepository: instrumentsRepository,
 			promocodesRepository:  promocodesRepository,
 			operationsRepository:  operationsRepository,
+			portfoliosRepository:  portfoliosRepository,
 		},
 	}
 
@@ -78,7 +82,9 @@ func New(ctx context.Context,
 	bot.setupMiddlewares()
 	bot.setupMessageRoutes()
 	bot.setupCallbackRoutes()
-	go bot.setupTopUsersUpdater()
+
+	go bot.setupBalancesAndTopUpdater()
+	// todo: go bot.setupStopOut() at 17:00 if user.MarginCall == true
 
 	return bot, nil
 }
@@ -116,7 +122,7 @@ func (b *Bot) setupMessageRoutes() {
 
 	for _, lang := range b.cfg.Languages {
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnMainMenu)}, b.mainMenuHandler)
-		//message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}, b.portfolioHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}, b.portfolioHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnOperations)}, b.operationsHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}, b.instrumentsListHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}, b.enterPromocodeHandler)
@@ -130,7 +136,7 @@ func (b *Bot) setupCallbackRoutes() {
 
 	callback.Handle(&telebot.Btn{Unique: cbkLanguage}, b.setLanguageHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkCheckSubscription}, b.checkSubscriptionHandler)
-	callback.Handle(&telebot.Btn{Unique: cbkInstrumentsListPage}, b.instrumentsListHandler)
+	callback.Handle(&telebot.Btn{Unique: cbkInstrumentsPage}, b.instrumentsListHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkInstrument}, b.instrumentHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkTopUsersPage}, b.topUsersHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkOperationsPage}, b.operationsHandler)

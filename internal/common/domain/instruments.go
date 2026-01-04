@@ -7,7 +7,13 @@ type InstrumentsRepository interface {
 	GetInstrumentsByPage(ctx context.Context, page int64) ([]*Instrument, error)
 }
 
-type Price struct {
+type InstrumentIdentifiers struct {
+	ID     int64  `json:"id"`
+	Ticker string `json:"ticker"`
+	Name   string `json:"name"`
+}
+
+type InstrumentPrices struct {
 	Last   float64 `json:"last"`
 	Bid    float64 `json:"bid"`
 	Ask    float64 `json:"ask"`
@@ -15,9 +21,6 @@ type Price struct {
 }
 
 type Instrument struct {
-	ID     int64  `json:"id"`
-	Ticker string `json:"ticker"`
-	Name   string `json:"name"`
-
-	Price
+	InstrumentIdentifiers
+	InstrumentPrices
 }
