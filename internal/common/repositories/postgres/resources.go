@@ -47,6 +47,7 @@ type TopUserData struct {
 	LanguageCode     string  `db:"language_code"`
 	AvailableBalance float64 `db:"available_balance"`
 	BlockedBalance   float64 `db:"blocked_balance"`
+	MarginCall       bool    `db:"margin_call"`
 	Ticker           *string `db:"ticker"`
 	Count            *int64  `db:"count"`
 }
@@ -59,6 +60,7 @@ func (d *TopUserData) CreateDomain() *domain.TopUserData {
 			LanguageCode:     d.LanguageCode,
 			AvailableBalance: d.AvailableBalance,
 			BlockedBalance:   d.BlockedBalance,
+			MarginCall:       d.MarginCall,
 		},
 	}
 

@@ -20,6 +20,25 @@ func NewInstrumentsRepository(pool *pgxpool.Pool) domain.InstrumentsRepository {
 	}
 }
 
+func (ir *instrumentsRepository) GetInstrumentByTicker(ctx context.Context, ticker string) (*domain.Instrument, error) {
+	query := `SELECT
+			id,
+			ticker,
+			name
+		FROM success_bot.instruments
+		WHERE ticker = $1`
+	instrument := &Instrument{}
+	if err := ir.psql.QueryRow(ctx, query, ticker).Scan(
+		&instrument.ID,
+		&instrument.Ticker,
+		&instrument.Name,
+	); err != nil {
+		return nil, errs.NewStack(err)
+	}
+
+	return instrument.CreateDomain(), nil
+}
+
 func (ir *instrumentsRepository) GetInstrumentsPagesCount(ctx context.Context) (int64, error) {
 	query := `SELECT COUNT(*) FROM success_bot.instruments`
 	var instrumentsCount int64

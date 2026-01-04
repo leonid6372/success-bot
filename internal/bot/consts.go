@@ -20,6 +20,8 @@ const (
 	msgMainMenu             = "main_menu"
 	msgInstrumentsList      = "instruments_list"
 	msgInstrument           = "instrument"
+	msgLastPrice            = "last_price"
+	msgInstrumentExit       = "instrument_exit"
 	msgTopUsersFirstPage    = "top_users_first_page"
 	msgTopUsers             = "top_users"
 	msgEnterPromocode       = "enter_promocode"
@@ -35,6 +37,8 @@ const (
 	msgPortfolio            = "portfolio"
 	msgEmptyPortfolio       = "empty_portfolio"
 	msgMarginCall           = "margin_call"
+	msgMarginCallWarning    = "margin_call_warning"
+	msgClosedExchange       = "closed_exchange"
 )
 
 const (
@@ -51,7 +55,6 @@ const (
 	btnMainMenu            = "button_main_menu"
 	btnNextPage            = "button_next_page"
 	btnPreviousPage        = "button_previous_page"
-	btnLastPrice           = "button_last_price"
 	btnBuy                 = "button_buy"
 	btnSell                = "button_sell"
 	btnPortfolioInstrument = "button_portfolio_instrument"

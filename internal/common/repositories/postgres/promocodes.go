@@ -70,7 +70,7 @@ func (pr *promocodesRepository) ApplyPromocode(ctx context.Context, value string
 		return nil, errs.NewStack(err)
 	}
 
-	query = `UPDATE success_bot.users SET balance = balance + $1, updated_at = NOW() WHERE id = $2`
+	query = `UPDATE success_bot.users SET available_balance = available_balance + $1, updated_at = NOW() WHERE id = $2`
 	if _, err = tx.Exec(ctx, query, promocode.BonusAmount, userID); err != nil {
 		return nil, errs.NewStack(err)
 	}

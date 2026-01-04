@@ -45,6 +45,7 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 					LanguageCode:     data.LanguageCode,
 					AvailableBalance: data.AvailableBalance,
 					BlockedBalance:   data.BlockedBalance,
+					MarginCall:       data.MarginCall,
 				}
 			}
 
@@ -74,9 +75,8 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 		for _, topUser := range mapTopUsers {
 			topUser.AvailableBalance += topUser.BlockedBalance
 
-			marginCall := false
-			if topUser.AvailableBalance < 0 {
-				marginCall = true
+			if !topUser.MarginCall && topUser.AvailableBalance < 0 {
+				topUser.MarginCall = true
 
 				b.Telebot.Send(
 					&telebot.User{ID: topUser.ID},
@@ -85,13 +85,17 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 				)
 			}
 
+			if topUser.MarginCall && topUser.AvailableBalance >= 0 {
+				topUser.MarginCall = false
+			}
+
 			topUser.TotalBalance += topUser.AvailableBalance + topUser.BlockedBalance
 
 			topUsers = append(topUsers, topUser)
 
 			// Update data in repository
 			if err := b.deps.usersRepository.UpdateUserBalancesAndMarginCall(
-				b.ctx, topUser.ID, topUser.AvailableBalance, &topUser.BlockedBalance, &marginCall,
+				b.ctx, topUser.ID, topUser.AvailableBalance, &topUser.BlockedBalance, &topUser.MarginCall,
 			); err != nil {
 				log.Error("failed to update user balances and margin call", zap.Int64("user_id", topUser.ID), zap.Error(err))
 			}
@@ -101,8 +105,8 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 			if ok {
 				user := rawUser.(*domain.User)
 				user.AvailableBalance = topUser.AvailableBalance
-				user.BlockedBalance = topUser.BlockedBalance
-				user.MarginCall = marginCall
+				user.BlockedBalance -= topUser.BlockedBalance
+				user.MarginCall = topUser.MarginCall
 			}
 		}
 
@@ -116,13 +120,24 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 		copy(b.topUsers, topUsers)
 		b.mu.Unlock()
 
-		time.Sleep(5 * time.Minute)
+		//time.Sleep(5 * time.Minute)
+		time.Sleep(15 * time.Second)
 	}
 }
 
-func (b *Bot) closeInstrument(user *domain.User) {
+func (b *Bot) closeInstrument(c telebot.Context, user *domain.User) error {
 	close(*user.Metadata.InstrumentDone)
 	user.Metadata.InstrumentDone = nil
+
+	text := b.deps.dictionary.Text(user.LanguageCode, msgInstrumentExit)
+
+	if err := c.Send(text, &telebot.SendOptions{
+		ReplyMarkup: b.mainMenuKeyboard(user.LanguageCode),
+	}); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
+
+	return nil
 }
 
 func (b *Bot) getCurrentPage(c telebot.Context) (int64, error) {

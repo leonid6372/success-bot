@@ -57,6 +57,7 @@ type TopUser struct {
 	AvailableBalance float64 `json:"available_balance"`
 	BlockedBalance   float64 `json:"blocked_balance"`
 	TotalBalance     float64 `json:"total_balance"`
+	MarginCall       bool    `json:"margin_call"`
 }
 
 type TopUserData struct {

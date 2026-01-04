@@ -100,6 +100,7 @@ func (ur *usersRepository) GetTopUsersData(ctx context.Context) ([]*domain.TopUs
 			u.language_code,
 			u.available_balance,
 			u.blocked_balance,
+			u.margin_call,
 			i.ticker,
 			ui.count 
 		FROM success_bot.users u
@@ -122,6 +123,7 @@ func (ur *usersRepository) GetTopUsersData(ctx context.Context) ([]*domain.TopUs
 			&data.LanguageCode,
 			&data.AvailableBalance,
 			&data.BlockedBalance,
+			&data.MarginCall,
 			&data.Ticker,
 			&data.Count,
 		); err != nil {

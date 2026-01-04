@@ -37,7 +37,9 @@ func (b *Bot) startHandler(c telebot.Context) error {
 	user := b.mustUser(c)
 
 	if user != nil && user.Metadata.InstrumentDone != nil {
-		b.closeInstrument(user)
+		if err := b.closeInstrument(c, user); err != nil {
+			return errs.NewStack(err)
+		}
 	}
 
 	if user == nil {
@@ -68,7 +70,9 @@ func (b *Bot) selectLanguageHandler(c telebot.Context) error {
 	}
 
 	if user.Metadata.InstrumentDone != nil {
-		b.closeInstrument(user)
+		if err := b.closeInstrument(c, user); err != nil {
+			return errs.NewStack(err)
+		}
 	}
 
 	text := b.deps.dictionary.Text(dictionary.DefaultLanguage, msgLanguage)
@@ -86,7 +90,9 @@ func (b *Bot) startMsg(c telebot.Context) error {
 	user := b.mustUser(c)
 
 	if user.Metadata.InstrumentDone != nil {
-		b.closeInstrument(user)
+		if err := b.closeInstrument(c, user); err != nil {
+			return errs.NewStack(err)
+		}
 	}
 
 	text := b.deps.dictionary.Text(user.LanguageCode, msgStart, map[string]any{
@@ -173,14 +179,15 @@ func (b *Bot) mainMenuHandler(c telebot.Context) error {
 	user := b.mustUser(c)
 
 	if user.Metadata.InstrumentDone != nil {
-		b.closeInstrument(user)
+		if err := b.closeInstrument(c, user); err != nil {
+			return errs.NewStack(err)
+		}
 	}
 
 	text := b.deps.dictionary.Text(user.LanguageCode, msgMainMenu)
 
 	if err := c.Send(text, &telebot.SendOptions{
 		ReplyMarkup: b.mainMenuKeyboard(user.LanguageCode),
-		ParseMode:   telebot.ModeHTML,
 	}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
@@ -195,7 +202,9 @@ func (b *Bot) portfolioHandler(c telebot.Context) error {
 	user := b.mustUser(c)
 
 	if user.Metadata.InstrumentDone != nil {
-		b.closeInstrument(user)
+		if err := b.closeInstrument(c, user); err != nil {
+			return errs.NewStack(err)
+		}
 	}
 
 	currentPage, err := b.getCurrentPage(c)
@@ -220,7 +229,13 @@ func (b *Bot) portfolioHandler(c telebot.Context) error {
 			"AvailableBalance": user.AvailableBalance,
 		})
 	} else {
+		var warning string
+		if user.MarginCall {
+			warning = b.deps.dictionary.Text(user.LanguageCode, msgMarginCallWarning)
+		}
+
 		text = b.deps.dictionary.Text(user.LanguageCode, msgPortfolio, map[string]any{
+			"Warning":          warning,
 			"CurrentPage":      currentPage,
 			"PagesCount":       pagesCount,
 			"AvailableBalance": user.AvailableBalance,
@@ -241,7 +256,10 @@ func (b *Bot) portfolioHandler(c telebot.Context) error {
 		user.LanguageCode, instruments, currentPage, pagesCount,
 	)
 
-	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
+	if err := c.Send(text, &telebot.SendOptions{
+		ReplyMarkup: markup,
+		ParseMode:   telebot.ModeHTML,
+	}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 
@@ -255,7 +273,9 @@ func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 	user := b.mustUser(c)
 
 	if user.Metadata.InstrumentDone != nil {
-		b.closeInstrument(user)
+		if err := b.closeInstrument(c, user); err != nil {
+			return errs.NewStack(err)
+		}
 	}
 
 	currentPage, err := b.getCurrentPage(c)
@@ -283,7 +303,10 @@ func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 		user.LanguageCode, instruments, currentPage, pagesCount,
 	)
 
-	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
+	if err := c.Send(text, &telebot.SendOptions{
+		ReplyMarkup: markup,
+		ParseMode:   telebot.ModeHTML,
+	}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 
@@ -296,7 +319,9 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 	user := b.mustUser(c)
 
 	if user.Metadata.InstrumentDone != nil {
-		b.closeInstrument(user)
+		if err := b.closeInstrument(c, user); err != nil {
+			return errs.NewStack(err)
+		}
 	}
 
 	args := c.Args()
@@ -307,12 +332,18 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 	ticker := args[0]
 
+	instrument, err := b.deps.instrumentsRepository.GetInstrumentByTicker(b.ctx, ticker)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get instrument by ticker: %v", err))
+	}
+
 	doneCh := make(chan struct{})
 	user.Metadata.InstrumentDone = &doneCh
 
 	go func(user *domain.User) {
 		text := b.deps.dictionary.Text(user.LanguageCode, msgInstrument, map[string]any{
-			"InstrumentTicker": ticker,
+			"InstrumentName":   instrument.Name,
+			"InstrumentTicker": instrument.Ticker,
 		})
 
 		if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
@@ -323,7 +354,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 		var prevPrice float64
 
 		for {
-			log.Info("ticker price circle")
+			log.Info("ticker price circle", zap.String("ticker", ticker), zap.String("user", user.Username))
 
 			time.Sleep(500 * time.Millisecond)
 
@@ -350,10 +381,24 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 					color = "🔴"
 				}
 
-				text := b.deps.dictionary.Text(user.LanguageCode, btnLastPrice, map[string]any{
+				text := b.deps.dictionary.Text(user.LanguageCode, msgLastPrice, map[string]any{
 					"Color": color,
 					"Price": instrument.Last,
 				})
+
+				if instrument.Ask == 0 && instrument.Bid == 0 {
+					text += "\n\n" + b.deps.dictionary.Text(user.LanguageCode, msgClosedExchange)
+
+					if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
+						log.Error("failed to send message", zap.Error(err))
+					}
+
+					if err := b.closeInstrument(c, user); err != nil {
+						log.Error("failed to close instrument", zap.Error(err))
+					}
+
+					return
+				}
 
 				markup := b.instrumentKeyboard(user.LanguageCode, instrument)
 
@@ -456,7 +501,10 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 
 	markup := b.paginationKeyboard(user.LanguageCode, cbkTopUsersPage, currentPage, pagesCount)
 
-	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup, ParseMode: telebot.ModeHTML}); err != nil {
+	if err := c.Send(text, &telebot.SendOptions{
+		ReplyMarkup: markup,
+		ParseMode:   telebot.ModeHTML,
+	}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 
@@ -580,7 +628,10 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 
 	markup := b.paginationKeyboard(user.LanguageCode, cbkOperationsPage, currentPage, pagesCount)
 
-	if err := c.Send(text.String(), &telebot.SendOptions{ReplyMarkup: markup, ParseMode: telebot.ModeHTML}); err != nil {
+	if err := c.Send(text.String(), &telebot.SendOptions{
+		ReplyMarkup: markup,
+		ParseMode:   telebot.ModeHTML,
+	}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 

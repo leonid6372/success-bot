@@ -72,7 +72,7 @@ func (b *Bot) portfolioInstrumentsListByPageKeyboard(
 
 	for _, instrument := range instruments {
 		text := b.deps.dictionary.Text(lang, btnPortfolioInstrument, map[string]any{
-			"Name":              instrument.Name,
+			"Ticker":            instrument.Ticker,
 			"Count":             instrument.Count,
 			"AvgPrice":          instrument.AvgPrice,
 			"PercentDifference": instrument.Last/instrument.AvgPrice*100 - 100,
@@ -128,8 +128,8 @@ func (b *Bot) instrumentKeyboard(lang string, instrument *domain.Instrument) *te
 
 	rows := []telebot.Row{
 		{btnBuy, btnSell},
-		{btnPortfolio, btnInstrumentsList},
-		{btnMainMenu, btnInstrumentsSearch},
+		{btnInstrumentsList, btnPortfolio},
+		{btnInstrumentsSearch, btnMainMenu},
 	}
 
 	markup.Reply(rows...)
