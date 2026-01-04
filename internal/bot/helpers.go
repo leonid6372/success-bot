@@ -38,6 +38,16 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 		mapTopUsers := make(map[string]*domain.TopUser, usersCount)
 
 		for _, data := range topUsersData {
+			if _, ok := mapTopUsers[data.Username]; !ok {
+				mapTopUsers[data.Username] = &domain.TopUser{
+					ID:               data.ID,
+					Username:         data.Username,
+					LanguageCode:     data.LanguageCode,
+					AvailableBalance: data.AvailableBalance,
+					BlockedBalance:   data.BlockedBalance,
+				}
+			}
+
 			if data.Ticker == "" {
 				continue
 			}

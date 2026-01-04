@@ -425,7 +425,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 			top3Balance = b.topUsers[2].TotalBalance
 
 			for i := 3; i < min(domain.UsersPerPage, len(b.topUsers)); i++ {
-				usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].TotalBalance)
+				usersList += fmt.Sprintf("\n%d. %s %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].TotalBalance)
 			}
 			b.mu.RUnlock()
 		}
@@ -443,7 +443,7 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 		})
 	} else {
 		for i := domain.UsersPerPage * (currentPage - 1); i < min(domain.UsersPerPage*currentPage, int64(len(b.topUsers))); i++ {
-			usersList += fmt.Sprintf("\n%d. %s - %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].TotalBalance)
+			usersList += fmt.Sprintf("\n%d. %s %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].TotalBalance)
 		}
 		b.mu.RUnlock()
 

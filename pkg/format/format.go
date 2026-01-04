@@ -10,6 +10,7 @@ import (
 
 func PrettyNumber(number any, separator, decimalSeparator string) string {
 	var numStr string
+	isNegative := false
 
 	switch number.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
@@ -41,6 +42,11 @@ func PrettyNumber(number any, separator, decimalSeparator string) string {
 		log.Warn("PrettyNumber: separator and decimalSeparator are the same", zap.String("value", separator))
 	}
 
+	if strings.HasPrefix(numStr, "-") {
+		isNegative = true
+		numStr = strings.TrimPrefix(numStr, "-")
+	}
+
 	parts := strings.Split(numStr, ".")
 	integerPart := parts[0]
 	decimalPart := ""
@@ -56,6 +62,11 @@ func PrettyNumber(number any, separator, decimalSeparator string) string {
 	}
 
 	var intPart strings.Builder
+
+	if isNegative {
+		intPart.WriteString("-")
+	}
+
 	intPart.WriteString(integerPart[:start])
 
 	for i := start; i < length; i += 3 {

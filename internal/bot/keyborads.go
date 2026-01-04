@@ -75,7 +75,7 @@ func (b *Bot) portfolioInstrumentsListByPageKeyboard(
 			"Name":              instrument.Name,
 			"Count":             instrument.Count,
 			"AvgPrice":          instrument.AvgPrice,
-			"PercentDifference": fmt.Sprintf("%.2f", instrument.Last/instrument.AvgPrice*100-100),
+			"PercentDifference": instrument.Last/instrument.AvgPrice*100 - 100,
 		})
 		callbackData := fmt.Sprintf("%s|%s", cbkInstrument, instrument.Ticker)
 
@@ -142,6 +142,7 @@ func (b *Bot) paginationKeyboard(lang string, callback string, currentPage, page
 	var rows []telebot.Row
 
 	rows = b.addPaginationCbkButtons(rows, lang, callback, currentPage, pagesCount)
+
 	markup.Inline(rows...)
 	return markup
 }
