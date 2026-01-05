@@ -115,12 +115,8 @@ func (b *Bot) instrumentsListByPageKeyboard(
 func (b *Bot) instrumentKeyboard(lang string, instrument *domain.Instrument) *telebot.ReplyMarkup {
 	markup := &telebot.ReplyMarkup{}
 
-	btnBuy := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy, map[string]any{
-		"Price": instrument.Ask,
-	})}
-	btnSell := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSell, map[string]any{
-		"Price": instrument.Bid,
-	})}
+	btnBuy := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy)}
+	btnSell := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSell)}
 	btnPortfolio := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}
 	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
 	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsSearch)}

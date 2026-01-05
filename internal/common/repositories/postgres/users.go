@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/leonid6372/success-bot/internal/boterrs"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/errs"
 )
@@ -74,7 +75,7 @@ func (ur *usersRepository) GetUserByID(ctx context.Context, id int64) (*domain.U
 		&user.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return nil, boterrs.ErrUserNotFound
 		}
 
 		return nil, errs.NewStack(err)

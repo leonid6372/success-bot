@@ -84,7 +84,7 @@ func New(ctx context.Context,
 	bot.setupCallbackRoutes()
 
 	go bot.setupBalancesAndTopUpdater()
-	// todo: go bot.setupStopOut() at 17:00 if user.MarginCall == true
+	go bot.setupStopOutProcessor()
 
 	return bot, nil
 }
@@ -128,6 +128,8 @@ func (b *Bot) setupMessageRoutes() {
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}, b.enterPromocodeHandler)
 		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}, b.faqHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}, b.topUsersHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy)}, b.buyHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSell)}, b.sellHandler)
 	}
 }
 

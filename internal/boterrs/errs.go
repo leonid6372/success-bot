@@ -3,6 +3,10 @@ package boterrs
 import "errors"
 
 var (
-	ErrInvalidPromocode = errors.New("invalid promocode")
-	ErrUsedPromocode    = errors.New("used promocode")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrInvalidPromocode  = errors.New("invalid promocode")
+	ErrUsedPromocode     = errors.New("used promocode")
+	ErrEmptyTickerToBuy  = errors.New("empty ticker to buy")
+	ErrEmptyTickerToSell = errors.New("empty ticker to sell")
+	ErrInsufficientFunds = errors.New("insufficient funds")
 )

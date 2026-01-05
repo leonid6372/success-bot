@@ -2,8 +2,10 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"strings"
 
+	"github.com/leonid6372/success-bot/internal/boterrs"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
 	"github.com/leonid6372/success-bot/pkg/errs"
@@ -13,7 +15,6 @@ import (
 )
 
 const (
-	//ctxUser           = "user"
 	ctxContext        = "context"
 	ctxUserSubscribed = "subscribed"
 )
@@ -26,7 +27,6 @@ func (b *Bot) recoveryMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc {
 					zap.Any("panic", r),
 					zap.Stack("stack"),
 				)
-
 			}
 		}()
 
@@ -127,6 +127,12 @@ func (b *Bot) selectUserMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc
 
 		user, err := b.deps.usersRepository.GetUserByID(ctx, tgID)
 		if err != nil {
+			if errors.Is(err, boterrs.ErrUserNotFound) {
+				b.cache.SetDefault(tgID, user)
+
+				return b.startHandler(c)
+			}
+
 			return errs.NewStack(err)
 		}
 

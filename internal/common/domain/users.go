@@ -8,6 +8,7 @@ import (
 const (
 	InputTypePromocode = "promocode"
 	InputTypeTicker    = "ticker"
+	InputTypeCount     = "count"
 )
 
 type UsersRepository interface {
@@ -26,8 +27,13 @@ type UsersRepository interface {
 }
 
 type Metadata struct {
-	InstrumentDone *chan struct{}
-	InputType      string
+	InstrumentDone      *chan struct{}
+	InstrumentTicker    string
+	InstrumentBuyPrice  float64
+	InstrumentSellPrice float64
+	InstrumentOperation string
+
+	InputType string
 }
 
 type User struct {
@@ -54,10 +60,11 @@ type TopUser struct {
 	Username     string `json:"username"`
 	LanguageCode string `json:"language_code"`
 
-	AvailableBalance float64 `json:"available_balance"`
-	BlockedBalance   float64 `json:"blocked_balance"`
-	TotalBalance     float64 `json:"total_balance"`
-	MarginCall       bool    `json:"margin_call"`
+	AvailableBalance   float64 `json:"available_balance"`
+	BlockedBalance     float64 `json:"blocked_balance"`
+	BlockedBalanceDiff float64 `json:"blocked_balance_diff"`
+	TotalBalance       float64 `json:"total_balance"`
+	MarginCall         bool    `json:"margin_call"`
 }
 
 type TopUserData struct {

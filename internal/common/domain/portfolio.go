@@ -9,6 +9,9 @@ type PortfolioRepository interface {
 	GetUsersInstrumentsCount(ctx context.Context) (int64, error)
 	GetUserPortfolioPagesCount(ctx context.Context, userID int64) (int64, error)
 	GetUserPortfolioByPage(ctx context.Context, userID int64, currentPage int64) ([]*UserInstrument, error)
+	GetUserMostExpensiveShort(ctx context.Context, userID int64) (*UserInstrument, error)
+	BuyInstrument(ctx context.Context, userID, instrumentID, countToBuy int64, price float64) error
+	SellInstrument(ctx context.Context, userID, instrumentID, countToSell int64, price float64) error
 }
 
 type UserInstrument struct {
