@@ -183,8 +183,9 @@ func (pr *portfolioRepository) SellInstrument(ctx context.Context, userID, instr
 		balanceDiff := float64(count)*(price-avgPrice) - float64(count)*price*0.003
 
 		query = `UPDATE success_bot.users
-			SET available_balance = available_balance + $1`
-		if _, err = tx.Exec(ctx, query, balanceDiff); err != nil {
+			SET available_balance = available_balance + $1
+			WHERE id = $2`
+		if _, err = tx.Exec(ctx, query, balanceDiff, userID); err != nil {
 			return errs.NewStack(err)
 		}
 
@@ -228,8 +229,9 @@ func (pr *portfolioRepository) SellInstrument(ctx context.Context, userID, instr
 		}
 
 		query = `UPDATE success_bot.users
-			SET available_balance = available_balance - $1, blocked_balance = blocked_balance + $2`
-		if _, err = tx.Exec(ctx, query, needBalance, amountToBlock); err != nil {
+			SET available_balance = available_balance - $1, blocked_balance = blocked_balance + $2
+			WHERE id = $3`
+		if _, err = tx.Exec(ctx, query, needBalance, amountToBlock, userID); err != nil {
 			return errs.NewStack(err)
 		}
 
@@ -326,8 +328,9 @@ func (pr *portfolioRepository) BuyInstrument(ctx context.Context, userID, instru
 		balanceDiff := float64(-count)*(price-avgPrice) - float64(count)*price*0.003
 
 		query = `UPDATE success_bot.users
-			SET available_balance = available_balance + $1`
-		if _, err = tx.Exec(ctx, query, balanceDiff); err != nil {
+			SET available_balance = available_balance + $1
+			WHERE id = $2`
+		if _, err = tx.Exec(ctx, query, balanceDiff, userID); err != nil {
 			return errs.NewStack(err)
 		}
 
@@ -369,8 +372,9 @@ func (pr *portfolioRepository) BuyInstrument(ctx context.Context, userID, instru
 		}
 
 		query = `UPDATE success_bot.users
-			SET available_balance = available_balance - $1`
-		if _, err = tx.Exec(ctx, query, balanceDiff); err != nil {
+			SET available_balance = available_balance - $1
+			WHERE id = $2`
+		if _, err = tx.Exec(ctx, query, balanceDiff, userID); err != nil {
 			return errs.NewStack(err)
 		}
 
