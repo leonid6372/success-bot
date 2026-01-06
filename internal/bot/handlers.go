@@ -453,6 +453,8 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 		var top1Balance, top2Balance, top3Balance float64
 
 		switch len(b.topUsers) {
+		case 0:
+			b.mu.RUnlock()
 		case 1:
 			top1Username = b.topUsers[0].Username
 			top1Balance = b.topUsers[0].TotalBalance
@@ -783,7 +785,12 @@ func (b *Bot) buyHandler(c telebot.Context) error {
 	user.Metadata.InputType = domain.InputTypeCount
 	user.Metadata.InstrumentOperation = domain.OperationTypeBuy
 
-	maxCount := int64(user.AvailableBalance / (user.Metadata.InstrumentBuyPrice * 1.003)) // 3% fee for buying
+	maxCount, err := b.deps.portfoliosRepository.GetMaxInstrumentCountToBuy(
+		b.ctx, user.ID, user.Metadata.InstrumentTicker, user.Metadata.InstrumentBuyPrice,
+	)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get max count to buy: %v", err))
+	}
 
 	text := b.deps.dictionary.Text(user.LanguageCode, msgEnterCountToBuy, map[string]any{
 		"Price":    user.Metadata.InstrumentBuyPrice,
@@ -813,7 +820,12 @@ func (b *Bot) sellHandler(c telebot.Context) error {
 	user.Metadata.InputType = domain.InputTypeCount
 	user.Metadata.InstrumentOperation = domain.OperationTypeSell
 
-	maxCount := int64(user.AvailableBalance / (user.Metadata.InstrumentSellPrice * 0.503)) // 3% fee for buying and only 50% need for guarantee coverage
+	maxCount, err := b.deps.portfoliosRepository.GetMaxInstrumentCountToSell(
+		b.ctx, user.ID, user.Metadata.InstrumentTicker, user.Metadata.InstrumentSellPrice,
+	)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get max count to sell: %v", err))
+	}
 
 	text := b.deps.dictionary.Text(user.LanguageCode, msgEnterCountToSell, map[string]any{
 		"Price":    user.Metadata.InstrumentSellPrice,

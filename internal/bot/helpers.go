@@ -113,7 +113,7 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 				if ok {
 					user := rawUser.(*domain.User)
 					user.AvailableBalance = topUser.AvailableBalance
-					user.BlockedBalance -= topUser.BlockedBalance
+					user.BlockedBalance = topUser.BlockedBalance
 					user.MarginCall = topUser.MarginCall
 				}
 			}
@@ -174,7 +174,7 @@ func (b *Bot) setupStopOutProcessor() {
 
 						closeCount := int64(0)
 						for i := int64(1); i <= userShort.Count; i++ {
-							if float64(instrument.Last)*float64(i)*0.5*0.997 >= -topUser.AvailableBalance { // 50% guarantee coverage and 3% fee for buying
+							if float64(instrument.Last)*float64(i)*0.5*0.997 >= -topUser.AvailableBalance { // 50% guarantee coverage and 0,3% fee for buying
 								closeCount = i
 								break
 							}
