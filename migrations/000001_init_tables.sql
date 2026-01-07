@@ -21,8 +21,8 @@ create table if not exists success_bot.users
     language_code           varchar(2)      default 'en'    not null,
     is_premium              boolean         default false   not null,
 
-    available_balance       numeric(10, 2)  default 250000  not null,
-    blocked_balance         numeric(10, 2)  default 0       not null,
+    available_balance       numeric(15, 2)  default 250000  not null,
+    blocked_balance         numeric(15, 2)  default 0       not null,
     margin_call             boolean         default false   not null,
 
     created_at              timestamptz     default now()   not null,
@@ -38,7 +38,7 @@ create table if not exists success_bot.promocodes (
     id                      bigserial       primary key,
     available_count         int             default 0       not null,
     value                   varchar(64)                     not null,
-    bonus_amount            numeric(10, 2)  default 0       not null,
+    bonus_amount            numeric(15, 2)  default 0       not null,
     created_at              timestamptz     default now()   not null
 );
 
@@ -85,8 +85,8 @@ create table if not exists success_bot.operations
     type                    varchar(16)                     not null, -- e.g., 'buy', 'sell', 'fee', 'promocode'
 
     count                   int                             not null,
-    price                   numeric(10, 6)                  not null,
-    total_amount            numeric(10, 2)                  not null,
+    price                   numeric(15, 6)                  not null,
+    total_amount            numeric(15, 2)                  not null,
 
     created_at              timestamptz     default now()   not null
 );
@@ -96,7 +96,7 @@ create table if not exists success_bot.users_instruments
     user_id                 bigint                          not null,
     instrument_id           bigint                          not null,
     count                   int                             not null,
-    average_price           numeric(10, 6)                  not null,
+    average_price           numeric(15, 6)                  not null,
 
     created_at              timestamptz     default now()   not null,
     updated_at              timestamptz     default now()   not null,
