@@ -350,7 +350,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 	go func(user *domain.User) {
 		text := b.deps.dictionary.Text(user.LanguageCode, msgInstrument, map[string]any{
 			"InstrumentName":   instrument.Name,
-			"InstrumentTicker": instrument.Ticker,
+			"InstrumentTicker": instrument.Ticker[:strings.Index(instrument.Ticker, "@")],
 		})
 
 		if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
