@@ -85,7 +85,7 @@ create table if not exists success_bot.operations
     type                    varchar(16)                     not null, -- e.g., 'buy', 'sell', 'fee', 'promocode'
 
     count                   int                             not null,
-    price                   numeric(10, 2)                  not null,
+    price                   numeric(10, 6)                  not null,
     total_amount            numeric(10, 2)                  not null,
 
     created_at              timestamptz     default now()   not null
@@ -96,7 +96,7 @@ create table if not exists success_bot.users_instruments
     user_id                 bigint                          not null,
     instrument_id           bigint                          not null,
     count                   int                             not null,
-    average_price           numeric(10, 2)                  not null,
+    average_price           numeric(10, 6)                  not null,
 
     created_at              timestamptz     default now()   not null,
     updated_at              timestamptz     default now()   not null,

@@ -159,7 +159,7 @@ func (b *Bot) checkSubscriptionHandler(c telebot.Context) error {
 
 	if subscribed {
 		if err := c.Delete(); err != nil {
-			log.Warn("Failed to delete message", zap.Error(err))
+			log.Warn("Failed to delete message", zap.String("username", sender.Username), zap.Error(err))
 		}
 
 		text := b.deps.dictionary.Text(user.LanguageCode, msgSubscriptionSuccess)
@@ -349,7 +349,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 		})
 
 		if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
-			log.Error("failed to send message", zap.Error(err))
+			log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
 			return
 		}
 
@@ -360,24 +360,30 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 		for {
 			time.Sleep(500 * time.Millisecond)
 
-			log.Info("ticker price circle", zap.String("ticker", ticker), zap.String("user", user.Username))
+			log.Info("ticker price circle", zap.String("username", user.Username), zap.String("ticker", ticker))
 			select {
 			case <-doneCh:
 				return
 			default:
-				instrument, err := b.deps.finam.GetInstrumentPrices(b.ctx, ticker)
+				instrumentPrices, err := b.deps.finam.GetInstrumentPrices(b.ctx, ticker)
 				if err != nil {
-					log.Error("failed to get instrument info", zap.Error(err))
+					log.Error("failed to get instrument info", zap.String("username", user.Username), zap.Error(err))
+				}
+
+				instrumentInfo, err := b.deps.finam.GetInstrumentInfo(b.ctx, ticker)
+				if err != nil {
+					log.Error("failed to get instrument info", zap.String("username", user.Username), zap.Error(err))
+					continue
 				}
 
 				// Skip if price didn't change
-				if prevPrice == instrument.Last {
+				if prevPrice == instrumentPrices.Last {
 					continue
 				}
 
 				var color string
 
-				if instrument.Last > prevPrice {
+				if instrumentPrices.Last > prevPrice {
 					color = "🟢"
 				} else {
 					color = "🔴"
@@ -385,32 +391,32 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 				text := b.deps.dictionary.Text(user.LanguageCode, msgLastPrice, map[string]any{
 					"Color": color,
-					"Price": instrument.Last,
+					"Price": fmt.Sprintf(`%.*f`, instrumentInfo.Decimals, instrumentPrices.Last),
 				})
 
-				if instrument.Ask == 0 && instrument.Bid == 0 {
+				if instrumentPrices.Ask == 0 && instrumentPrices.Bid == 0 {
 					text += "\n\n" + b.deps.dictionary.Text(user.LanguageCode, msgClosedExchange)
 
 					if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
-						log.Error("failed to send message", zap.Error(err))
+						log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
 					}
 
 					if err := b.closeInstrument(c, user); err != nil {
-						log.Error("failed to close instrument", zap.Error(err))
+						log.Error("failed to close instrument", zap.String("username", user.Username), zap.Error(err))
 					}
 
 					return
 				}
 
-				prevPrice = instrument.Last
+				prevPrice = instrumentPrices.Last
 
-				user.Metadata.InstrumentBuyPrice = instrument.Ask
-				user.Metadata.InstrumentSellPrice = instrument.Bid
+				user.Metadata.InstrumentBuyPrice = instrumentPrices.Ask
+				user.Metadata.InstrumentSellPrice = instrumentPrices.Bid
 
-				markup := b.instrumentKeyboard(user.LanguageCode, instrument)
+				markup := b.instrumentKeyboard(user.LanguageCode, instrumentPrices)
 
 				if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
-					log.Error("failed to send message", zap.Error(err))
+					log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
 				}
 			}
 		}
@@ -547,7 +553,7 @@ func (b *Bot) textHandler(c telebot.Context) error {
 			return b.inputCountToSell(c)
 		default:
 			log.Error("invalid user operation type",
-				zap.String("user", user.Username),
+				zap.String("username", user.Username),
 				zap.String("operation_type", user.Metadata.InstrumentOperation),
 			)
 
@@ -728,7 +734,7 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationBuy, map[string]any{
 				"OperationID": op.ID,
 				"Count":       op.Count,
-				"Name":        op.InstrumentName[5:], // cut instrument emoji
+				"Name":        strings.Split(op.InstrumentName, " ")[1], // cut instrument emoji
 				"Amount":      op.TotalAmount,
 			}))
 
@@ -736,7 +742,7 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationSell, map[string]any{
 				"OperationID": op.ID,
 				"Count":       op.Count,
-				"Name":        op.InstrumentName[5:], // cut instrument emoji
+				"Name":        strings.Split(op.InstrumentName, " ")[1], // cut instrument emoji
 				"Amount":      op.TotalAmount,
 			}))
 
@@ -753,7 +759,7 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 			}))
 
 		default:
-			log.Error("unknown operation type", zap.String("type", string(op.Type)))
+			log.Error("unknown operation type", zap.String("username", user.Username), zap.String("type", string(op.Type)))
 		}
 	}
 

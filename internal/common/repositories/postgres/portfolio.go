@@ -94,6 +94,7 @@ func (pr *portfolioRepository) GetUserPortfolioByPage(ctx context.Context, userI
 func (pr *portfolioRepository) GetUserMostExpensiveShort(ctx context.Context, userID int64) (*domain.UserInstrument, error) {
 	query := `SELECT
 			ui.user_id,
+			i.id,
 			i.ticker,
 			i.name,
 			ui.count,
@@ -109,6 +110,7 @@ func (pr *portfolioRepository) GetUserMostExpensiveShort(ctx context.Context, us
 	userInstrument := &UserInstrument{}
 	if err := pr.psql.QueryRow(ctx, query, userID).Scan(
 		&userInstrument.UserID,
+		&userInstrument.InstrumentID,
 		&userInstrument.InstrumentTicker,
 		&userInstrument.InstrumentName,
 		&userInstrument.Count,
@@ -195,6 +197,10 @@ func (pr *portfolioRepository) SellInstrument(ctx context.Context, userID, instr
 			if _, err = tx.Exec(ctx, query, userID, instrumentID); err != nil {
 				return errs.NewStack(err)
 			}
+
+			remainsCount -= currentCount
+			currentCount = 0
+			avgPrice = 0
 		} else { // close part of long
 			query = `UPDATE success_bot.users_instruments
 			SET count = count - $1
@@ -203,12 +209,9 @@ func (pr *portfolioRepository) SellInstrument(ctx context.Context, userID, instr
 				return errs.NewStack(err)
 			}
 
-			return nil
+			remainsCount = 0
+			currentCount -= count
 		}
-
-		remainsCount -= currentCount
-		currentCount = 0
-		avgPrice = 0
 	}
 
 	// make sell
@@ -340,6 +343,10 @@ func (pr *portfolioRepository) BuyInstrument(ctx context.Context, userID, instru
 			if _, err = tx.Exec(ctx, query, userID, instrumentID); err != nil {
 				return errs.NewStack(err)
 			}
+
+			remainsCount += currentCount
+			currentCount = 0
+			avgPrice = 0
 		} else { // close part of short
 			query = `UPDATE success_bot.users_instruments
 			SET count = count + $1
@@ -348,12 +355,9 @@ func (pr *portfolioRepository) BuyInstrument(ctx context.Context, userID, instru
 				return errs.NewStack(err)
 			}
 
-			return nil
+			remainsCount = 0
+			currentCount += count
 		}
-
-		remainsCount += currentCount
-		currentCount = 0
-		avgPrice = 0
 	}
 
 	// make buy

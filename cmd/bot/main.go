@@ -19,9 +19,8 @@ import (
 )
 
 func main() {
-	var configPath, migrationPath string
-	flag.StringVar(&configPath, "config", "test.yaml", "bot config path")
-	flag.StringVar(&migrationPath, "migrations", "migrations", "bot migrations path")
+	var configPath string
+	flag.StringVar(&configPath, "config", "prod.yaml", "bot config path")
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())

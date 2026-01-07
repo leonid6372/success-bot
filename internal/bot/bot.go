@@ -13,6 +13,7 @@ import (
 	"github.com/leonid6372/success-bot/pkg/dictionary"
 	"github.com/leonid6372/success-bot/pkg/errs"
 	"github.com/leonid6372/success-bot/pkg/log"
+	"go.uber.org/zap"
 	"gopkg.in/telebot.v4"
 )
 
@@ -157,7 +158,7 @@ func (b *Bot) mustUser(c telebot.Context) *domain.User {
 
 	user, ok := b.cache.Get(tgID)
 	if !ok {
-		log.Fatal("user not found in cache")
+		log.Fatal("user not found in cache", zap.String("username", c.Sender().Username))
 	}
 
 	return user.(*domain.User)

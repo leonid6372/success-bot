@@ -28,9 +28,22 @@ func NewClient(ctx context.Context, token, accountID string) (*Client, error) {
 // GetInstrumentPrices return domain.Instrument struct with actual Price's values by Finam Quote API.
 func (c *Client) GetInstrumentPrices(ctx context.Context, ticker string) (*domain.Instrument, error) {
 	var err error
-	res := &getInstrumentResponse{}
+	res := &getInstrumentQuoteResponse{}
 
 	res.QuoteResponse, err = c.Client.NewQuoteRequest(ticker).Do(ctx)
+	if err != nil {
+		return nil, errs.NewStack(err)
+	}
+
+	return res.CreateDomain(), nil
+}
+
+// GetInstrumentInfo return domain.Instrument struct with actual Decimals count value.
+func (c *Client) GetInstrumentInfo(ctx context.Context, ticker string) (*domain.Instrument, error) {
+	var err error
+	res := &getInstrumentInfoResponse{}
+
+	res.AssetInfo, err = c.Client.NewAssetInfoRequest(ticker, c.accountID).Do(ctx)
 	if err != nil {
 		return nil, errs.NewStack(err)
 	}

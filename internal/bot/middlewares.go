@@ -24,6 +24,7 @@ func (b *Bot) recoveryMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc {
 		defer func() {
 			if r := recover(); r != nil {
 				log.Error("recovered from panic",
+					zap.String("username", c.Sender().Username),
 					zap.Any("panic", r),
 					zap.Stack("stack"),
 				)
@@ -36,6 +37,8 @@ func (b *Bot) recoveryMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc {
 
 func (b *Bot) timeoutMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc {
 	return func(c telebot.Context) error {
+		log.Info("request", zap.String("username", c.Sender().Username), zap.String("text", c.Text()))
+
 		ctx, cancel := context.WithTimeout(context.Background(), b.cfg.Timeout)
 		defer cancel()
 
@@ -59,7 +62,7 @@ func (b *Bot) updateUserInfoMiddleware(next telebot.HandlerFunc) telebot.Handler
 		}
 
 		if err := b.deps.usersRepository.UpdateUserTGData(ctx, user); err != nil {
-			log.Error("failed to update user info", zap.Error(err))
+			log.Error("failed to update user info", zap.String("username", user.Username), zap.Error(err))
 		}
 
 		return next(c)

@@ -5,11 +5,11 @@ import (
 	"github.com/leonid6372/success-bot/internal/common/domain"
 )
 
-type getInstrumentResponse struct {
+type getInstrumentQuoteResponse struct {
 	finam.QuoteResponse
 }
 
-func (res *getInstrumentResponse) CreateDomain() *domain.Instrument {
+func (res *getInstrumentQuoteResponse) CreateDomain() *domain.Instrument {
 	return &domain.Instrument{
 		InstrumentIdentifiers: domain.InstrumentIdentifiers{
 			Ticker: res.Quote.Symbol,
@@ -20,5 +20,18 @@ func (res *getInstrumentResponse) CreateDomain() *domain.Instrument {
 			Ask:    res.Quote.Ask.Float64(),
 			Change: res.Quote.Change.Float64(),
 		},
+	}
+}
+
+type getInstrumentInfoResponse struct {
+	finam.AssetInfo
+}
+
+func (res *getInstrumentInfoResponse) CreateDomain() *domain.Instrument {
+	return &domain.Instrument{
+		InstrumentIdentifiers: domain.InstrumentIdentifiers{
+			Ticker: res.AssetInfo.Ticker,
+		},
+		Decimals: res.AssetInfo.Decimals,
 	}
 }

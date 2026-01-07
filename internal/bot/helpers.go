@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	_ "time/tzdata"
+
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/errs"
 	"github.com/leonid6372/success-bot/pkg/log"
@@ -155,7 +157,7 @@ func (b *Bot) setupStopOutProcessor() {
 						userShort, err := b.deps.portfoliosRepository.GetUserMostExpensiveShort(b.ctx, topUser.ID)
 						if err != nil {
 							log.Error("failed to get user most expensive short",
-								zap.Int64("user_id", topUser.ID),
+								zap.String("username", topUser.Username),
 								zap.Error(err),
 							)
 
@@ -173,8 +175,8 @@ func (b *Bot) setupStopOutProcessor() {
 						}
 
 						closeCount := int64(0)
-						for i := int64(1); i <= userShort.Count; i++ {
-							if float64(instrument.Last)*float64(i)*0.5*0.997 >= -topUser.AvailableBalance { // 50% guarantee coverage and 0,3% fee for buying
+						for i := int64(1); i <= -userShort.Count; i++ {
+							if instrument.Last*0.497*float64(i)-((instrument.Last-userShort.AvgPrice)*float64(i)) >= -topUser.AvailableBalance { // 50% guarantee coverage and 0,3% fee for buying
 								closeCount = i
 								break
 							}
@@ -184,7 +186,7 @@ func (b *Bot) setupStopOutProcessor() {
 							b.ctx, topUser.ID, userShort.ID, closeCount, instrument.Last,
 						); err != nil {
 							log.Error("failed to buy instrument",
-								zap.Int64("user_id", topUser.ID),
+								zap.String("username", topUser.Username),
 								zap.String("ticker", userShort.Ticker),
 								zap.Error(err),
 							)
@@ -246,7 +248,7 @@ func (b *Bot) addPaginationCbkButtons(
 	if currentPage == 1 {
 		rows = append(rows, telebot.Row{
 			markup.Data(
-				b.deps.dictionary.Text(lang, btnNextPage),
+				b.deps.dictionary.Text(lang, btnNext),
 				fmt.Sprintf("%s|%d", cbkName, currentPage+1),
 			),
 		})
@@ -255,7 +257,7 @@ func (b *Bot) addPaginationCbkButtons(
 	if currentPage == pagesCount {
 		rows = append(rows, telebot.Row{
 			markup.Data(
-				b.deps.dictionary.Text(lang, btnPreviousPage),
+				b.deps.dictionary.Text(lang, btnPrevious),
 				fmt.Sprintf("%s|%d", cbkName, currentPage-1),
 			),
 		})
@@ -264,11 +266,11 @@ func (b *Bot) addPaginationCbkButtons(
 	if currentPage > 1 && currentPage < pagesCount {
 		rows = append(rows, telebot.Row{
 			markup.Data(
-				b.deps.dictionary.Text(lang, btnPreviousPage),
+				b.deps.dictionary.Text(lang, btnPrevious),
 				fmt.Sprintf("%s|%d", cbkName, currentPage-1),
 			),
 			markup.Data(
-				b.deps.dictionary.Text(lang, btnNextPage),
+				b.deps.dictionary.Text(lang, btnNext),
 				fmt.Sprintf("%s|%d", cbkName, currentPage+1),
 			),
 		})

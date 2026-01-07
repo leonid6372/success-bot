@@ -9,13 +9,12 @@ import (
 )
 
 const (
-	EnvProd = "prod"
-	EnvTest = "test"
+	EnvProd  = "prod"
+	EnvDebug = "debug"
 )
 
 type Config struct {
-	Env      string `yaml:"env" env:"ENV" env-upd:""`
-	Location string `yaml:"location" env:"LOCATION" env-upd:""`
+	Env string `yaml:"env" env:"ENV" env-upd:""`
 
 	Postgres Postgres `yaml:"postgres"`
 
