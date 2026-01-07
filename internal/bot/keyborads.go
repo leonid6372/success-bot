@@ -79,7 +79,7 @@ func (b *Bot) portfolioInstrumentsListByPageKeyboard(
 		}
 
 		text := b.deps.dictionary.Text(lang, btnPortfolioInstrument, map[string]any{
-			"Ticker":            strings.Split(instrument.Ticker, "@")[1],
+			"Ticker":            instrument.Ticker[:strings.Index(instrument.Ticker, "@")],
 			"Count":             instrument.Count,
 			"AvgPrice":          instrument.AvgPrice,
 			"PercentDifference": diff,

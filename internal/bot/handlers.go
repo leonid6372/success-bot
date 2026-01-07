@@ -734,7 +734,7 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationBuy, map[string]any{
 				"OperationID": op.ID,
 				"Count":       op.Count,
-				"Name":        strings.Split(op.InstrumentName, " ")[1], // cut instrument emoji
+				"Name":        op.InstrumentName[strings.Index(op.InstrumentName, " ")+1:], // cut instrument emoji
 				"Amount":      op.TotalAmount,
 			}))
 
@@ -742,7 +742,7 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationSell, map[string]any{
 				"OperationID": op.ID,
 				"Count":       op.Count,
-				"Name":        strings.Split(op.InstrumentName, " ")[1], // cut instrument emoji
+				"Name":        op.InstrumentName[strings.Index(op.InstrumentName, " ")+1:], // cut instrument emoji
 				"Amount":      op.TotalAmount,
 			}))
 
