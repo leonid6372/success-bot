@@ -1,5 +1,4 @@
 env: test
-location: "Europe/Moscow"
 
 postgres:
   host: localhost

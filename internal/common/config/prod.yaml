@@ -1,5 +1,4 @@
 env: prod
-location: "Europe/Moscow"
 
 postgres:
   host: localhost
