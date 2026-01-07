@@ -6,7 +6,7 @@ import (
 )
 
 type OperationsRepository interface {
-	GetOperationsPagesCount(ctx context.Context) (int64, error)
+	GetOperationsPagesCount(ctx context.Context, userID int64) (int64, error)
 	GetOperationsByPage(ctx context.Context, userID, page int64) ([]*Operation, error)
 }
 

@@ -707,7 +707,7 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 		return errs.NewStack(err)
 	}
 
-	pagesCount, err := b.deps.operationsRepository.GetOperationsPagesCount(ctx)
+	pagesCount, err := b.deps.operationsRepository.GetOperationsPagesCount(ctx, user.ID)
 	if err != nil {
 		return errs.NewStack(fmt.Errorf("failed to get operations pages count: %v", err))
 	}

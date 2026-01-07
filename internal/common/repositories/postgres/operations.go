@@ -20,10 +20,10 @@ func NewOperationsRepository(pool *pgxpool.Pool) domain.OperationsRepository {
 	}
 }
 
-func (or *operationsRepository) GetOperationsPagesCount(ctx context.Context) (int64, error) {
-	query := `SELECT COUNT(*) FROM success_bot.operations`
+func (or *operationsRepository) GetOperationsPagesCount(ctx context.Context, userID int64) (int64, error) {
+	query := `SELECT COUNT(*) FROM success_bot.operations WHERE user_id = $1`
 	var operationsCount int64
-	if err := or.psql.QueryRow(ctx, query).Scan(&operationsCount); err != nil {
+	if err := or.psql.QueryRow(ctx, query, userID).Scan(&operationsCount); err != nil {
 		return 0, errs.NewStack(err)
 	}
 
