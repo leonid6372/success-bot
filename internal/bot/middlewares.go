@@ -121,9 +121,9 @@ func (b *Bot) selectUserMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc
 		ctx := c.Get(ctxContext).(context.Context)
 		tgID := c.Sender().ID
 
-		user, ok := b.cache.Get(tgID)
+		user, ok := b.users.Get(tgID)
 		if ok {
-			b.cache.SetDefault(tgID, user)
+			b.users.SetDefault(tgID, user)
 
 			return next(c)
 		}
@@ -131,7 +131,7 @@ func (b *Bot) selectUserMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc
 		user, err := b.deps.usersRepository.GetUserByID(ctx, tgID)
 		if err != nil {
 			if errors.Is(err, boterrs.ErrUserNotFound) {
-				b.cache.SetDefault(tgID, user)
+				b.users.SetDefault(tgID, user)
 
 				return b.startHandler(c)
 			}
@@ -139,7 +139,7 @@ func (b *Bot) selectUserMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc
 			return errs.NewStack(err)
 		}
 
-		b.cache.SetDefault(tgID, user)
+		b.users.SetDefault(tgID, user)
 
 		return next(c)
 	}

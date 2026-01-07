@@ -79,7 +79,7 @@ func (b *Bot) portfolioInstrumentsListByPageKeyboard(
 		}
 
 		text := b.deps.dictionary.Text(lang, btnPortfolioInstrument, map[string]any{
-			"Ticker":            instrument.Ticker[:strings.Index(instrument.Ticker, "@")],
+			"Ticker":            "#" + instrument.Ticker[:strings.Index(instrument.Ticker, "@")],
 			"Count":             instrument.Count,
 			"AvgPrice":          instrument.AvgPrice,
 			"PercentDifference": diff,
@@ -119,7 +119,7 @@ func (b *Bot) instrumentsListByPageKeyboard(
 	return markup
 }
 
-func (b *Bot) instrumentKeyboard(lang string, instrument *domain.Instrument) *telebot.ReplyMarkup {
+func (b *Bot) instrumentKeyboard(lang string) *telebot.ReplyMarkup {
 	markup := &telebot.ReplyMarkup{}
 
 	btnBuy := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy)}

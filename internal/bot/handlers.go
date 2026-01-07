@@ -57,7 +57,7 @@ func (b *Bot) startHandler(c telebot.Context) error {
 			return errs.NewStack(err)
 		}
 
-		b.cache.SetDefault(user.ID, user)
+		b.users.SetDefault(user.ID, user)
 
 		return b.selectLanguageHandler(c)
 	}
@@ -224,11 +224,16 @@ func (b *Bot) portfolioHandler(c telebot.Context) error {
 		return errs.NewStack(fmt.Errorf("failed to get user portfolio by page: %v", err))
 	}
 
+	dbUser, err := b.deps.usersRepository.GetUserByID(ctx, user.ID)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to get user by id: %v", err))
+	}
+
 	var text string
 
 	if len(instruments) == 0 {
 		text = b.deps.dictionary.Text(user.LanguageCode, msgEmptyPortfolio, map[string]any{
-			"AvailableBalance": user.AvailableBalance,
+			"AvailableBalance": dbUser.AvailableBalance,
 		})
 	} else {
 		var warning string
@@ -240,18 +245,18 @@ func (b *Bot) portfolioHandler(c telebot.Context) error {
 			"Warning":          warning,
 			"CurrentPage":      currentPage,
 			"PagesCount":       pagesCount,
-			"AvailableBalance": user.AvailableBalance,
-			"BlockedBalance":   user.BlockedBalance,
+			"AvailableBalance": dbUser.AvailableBalance,
+			"BlockedBalance":   dbUser.BlockedBalance,
 		})
 	}
 
 	for _, instrument := range instruments {
-		price, err := b.deps.finam.GetInstrumentPrices(ctx, instrument.Ticker)
+		prices, err := b.getInstrumentPrices(ctx, instrument.Ticker)
 		if err != nil {
 			return errs.NewStack(fmt.Errorf("failed to get instrument prices: %v", err))
 		}
 
-		instrument.InstrumentPrices = price.InstrumentPrices
+		instrument.InstrumentPrices = prices.InstrumentPrices
 	}
 
 	markup := b.portfolioInstrumentsListByPageKeyboard(
@@ -358,7 +363,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 		user.Metadata.InstrumentTicker = ticker
 
 		for {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(2 * time.Second)
 
 			log.Info("ticker price circle", zap.String("username", user.Username), zap.String("ticker", ticker))
 			select {
@@ -413,7 +418,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 				user.Metadata.InstrumentBuyPrice = instrumentPrices.Ask
 				user.Metadata.InstrumentSellPrice = instrumentPrices.Bid
 
-				markup := b.instrumentKeyboard(user.LanguageCode, instrumentPrices)
+				markup := b.instrumentKeyboard(user.LanguageCode)
 
 				if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
 					log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
@@ -433,6 +438,18 @@ func (b *Bot) enterPromocodeHandler(c telebot.Context) error {
 	text := b.deps.dictionary.Text(user.LanguageCode, msgEnterPromocode)
 
 	if err := c.Send(text); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
+
+	return nil
+}
+
+func (b *Bot) faqHandler(c telebot.Context) error {
+	user := b.mustUser(c)
+
+	text := b.deps.dictionary.Text(user.LanguageCode, msgFAQ)
+
+	if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 

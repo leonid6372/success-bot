@@ -15,7 +15,9 @@ import (
 	"gopkg.in/telebot.v4"
 )
 
-func (b *Bot) setupBalancesAndTopUpdater() {
+// setupCacheUpdater setups a goroutine that updates instruments cache every minute.
+// Also updates user's blocked balances and top users list using actual instrument prices.
+func (b *Bot) setupCacheUpdater() {
 	for {
 		select {
 		case <-b.ctx.Done():
@@ -23,19 +25,28 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 			return
 
 		default:
+			// update instuments cache
+			tickers, err := b.deps.portfoliosRepository.GetUsersInstrumentTickers(b.ctx)
+			if err != nil {
+				log.Error("failed to get users instrument tickers", zap.Error(err))
+				continue
+			}
+
+			for _, ticker := range tickers {
+				instrument, err := b.deps.finam.GetInstrumentPrices(b.ctx, ticker)
+				if err != nil {
+					log.Error("failed to get instrument prices from finam", zap.String("ticker", ticker), zap.Error(err))
+					continue
+				}
+
+				b.instruments.SetDefault(ticker, instrument)
+			}
+
 			usersCount, err := b.deps.usersRepository.GetUsersCount(b.ctx)
 			if err != nil {
 				log.Error("failed to get users count", zap.Error(err))
 				continue
 			}
-
-			usersInstrumentsCount, err := b.deps.portfoliosRepository.GetUsersInstrumentsCount(b.ctx)
-			if err != nil {
-				log.Error("failed to get users instruments count", zap.Error(err))
-				continue
-			}
-
-			instruments := make(map[string]*domain.Instrument, usersInstrumentsCount)
 
 			topUsersData, err := b.deps.usersRepository.GetTopUsersData(b.ctx)
 			if err != nil {
@@ -62,22 +73,19 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 					continue
 				}
 
-				if _, ok := instruments[data.Ticker]; !ok {
-					instrument, err := b.deps.finam.GetInstrumentPrices(b.ctx, data.Ticker)
-					if err != nil {
-						log.Error("failed to get ticker info", zap.String("ticker", data.Ticker), zap.Error(err))
-					}
-
-					instruments[data.Ticker] = instrument
+				instrument, err := b.getInstrumentPrices(b.ctx, data.Ticker)
+				if err != nil {
+					log.Error("failed to get instrument prices", zap.String("ticker", data.Ticker), zap.Error(err))
+					continue
 				}
 
 				if data.Count >= 0 {
-					mapTopUsers[data.Username].TotalBalance += instruments[data.Ticker].Last * float64(data.Count)
+					mapTopUsers[data.Username].TotalBalance += instrument.Last * float64(data.Count)
 					continue
 				}
 
 				mapTopUsers[data.Username].BlockedBalanceDiff +=
-					instruments[data.Ticker].Last * float64(data.Count) * 0.5 // 50% guarantee coverage
+					instrument.Last * float64(data.Count) * 0.5 // 50% guarantee coverage
 			}
 
 			topUsers := make([]*domain.TopUser, 0, len(mapTopUsers))
@@ -111,7 +119,7 @@ func (b *Bot) setupBalancesAndTopUpdater() {
 				}
 
 				// Update data in cache
-				rawUser, ok := b.cache.Get(topUser.ID)
+				rawUser, ok := b.users.Get(topUser.ID)
 				if ok {
 					user := rawUser.(*domain.User)
 					user.AvailableBalance = topUser.AvailableBalance

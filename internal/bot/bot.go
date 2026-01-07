@@ -23,7 +23,8 @@ type Bot struct {
 	cfg *config.Bot
 	ctx context.Context
 
-	cache *cache.Cache // tgID -> *domain.User
+	users       *cache.Cache[int64]  // tgID -> *domain.User
+	instruments *cache.Cache[string] // ticker -> *domain.Instrument (only with prices data)
 
 	topUsers []*domain.TopUser // sorted by live-balance descending
 	mu       sync.RWMutex
@@ -61,10 +62,11 @@ func New(ctx context.Context,
 	}
 
 	bot := &Bot{
-		Telebot: b,
-		cfg:     cfg,
-		ctx:     ctx,
-		cache:   cache.New(16*time.Minute, 8*time.Minute),
+		Telebot:     b,
+		cfg:         cfg,
+		ctx:         ctx,
+		users:       cache.New[int64](16*time.Minute, 8*time.Minute),
+		instruments: cache.New[string](1*time.Minute, 30*time.Second),
 		deps: &Dependencies{
 			finam:                 finam,
 			dictionary:            dictionary,
@@ -84,7 +86,7 @@ func New(ctx context.Context,
 	bot.setupMessageRoutes()
 	bot.setupCallbackRoutes()
 
-	go bot.setupBalancesAndTopUpdater()
+	go bot.setupCacheUpdater()
 	go bot.setupStopOutProcessor()
 
 	return bot, nil
@@ -127,7 +129,7 @@ func (b *Bot) setupMessageRoutes() {
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnOperations)}, b.operationsHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}, b.instrumentsListHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}, b.enterPromocodeHandler)
-		// message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}, b.faqHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}, b.faqHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}, b.topUsersHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy)}, b.buyHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSell)}, b.sellHandler)
@@ -156,10 +158,26 @@ func (b *Bot) Stop() {
 func (b *Bot) mustUser(c telebot.Context) *domain.User {
 	tgID := c.Sender().ID
 
-	user, ok := b.cache.Get(tgID)
+	user, ok := b.users.Get(tgID)
 	if !ok {
 		log.Fatal("user not found in cache", zap.String("username", c.Sender().Username))
 	}
 
 	return user.(*domain.User)
+}
+
+func (b *Bot) getInstrumentPrices(ctx context.Context, ticker string) (*domain.Instrument, error) {
+	instrument, ok := b.instruments.Get(ticker)
+	if ok {
+		return instrument.(*domain.Instrument), nil
+	}
+
+	instrument, err := b.deps.finam.GetInstrumentPrices(ctx, ticker)
+	if err != nil {
+		return nil, errs.NewStack(err)
+	}
+
+	b.instruments.SetDefault(ticker, instrument)
+
+	return instrument.(*domain.Instrument), nil
 }

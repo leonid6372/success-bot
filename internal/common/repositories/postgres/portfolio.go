@@ -33,6 +33,32 @@ func (pr *portfolioRepository) GetUsersInstrumentsCount(ctx context.Context) (in
 	return instrumentsCount, nil
 }
 
+func (pr *portfolioRepository) GetUsersInstrumentTickers(ctx context.Context) ([]string, error) {
+	query := `SELECT DISTINCT i.ticker
+		FROM success_bot.users_instruments ui
+		JOIN success_bot.instruments i
+		ON ui.instrument_id = i.id`
+	rows, err := pr.psql.Query(ctx, query)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return []string{}, nil
+		}
+		return nil, errs.NewStack(err)
+	}
+	defer rows.Close()
+
+	tickers := []string{}
+	for rows.Next() {
+		var ticker string
+		if err := rows.Scan(&ticker); err != nil {
+			return nil, errs.NewStack(err)
+		}
+		tickers = append(tickers, ticker)
+	}
+
+	return tickers, nil
+}
+
 func (pr *portfolioRepository) GetUserPortfolioPagesCount(ctx context.Context, userID int64) (int64, error) {
 	query := `SELECT COUNT(*) FROM success_bot.users_instruments WHERE user_id = $1`
 	var instrumentsCount int64
