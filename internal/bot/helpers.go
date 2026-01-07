@@ -173,8 +173,8 @@ func (b *Bot) setupStopOutProcessor() {
 						}
 
 						closeCount := int64(0)
-						for i := int64(1); i <= userShort.Count; i++ {
-							if float64(instrument.Last)*float64(i)*0.5*0.997 >= -topUser.AvailableBalance { // 50% guarantee coverage and 0,3% fee for buying
+						for i := int64(1); i <= -userShort.Count; i++ {
+							if instrument.Last*0.497*float64(i)-((instrument.Last-userShort.AvgPrice)*float64(i)) >= -topUser.AvailableBalance { // 50% guarantee coverage and 0,3% fee for buying
 								closeCount = i
 								break
 							}

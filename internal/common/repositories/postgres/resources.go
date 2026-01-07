@@ -141,6 +141,7 @@ func (ho *HistoryOperation) CreateDomain() *domain.Operation {
 
 type UserInstrument struct {
 	UserID           int64     `db:"user_id"`
+	InstrumentID     int64     `db:"instrument_id"`
 	InstrumentTicker string    `db:"instrument_ticker"`
 	InstrumentName   string    `db:"instrument_name"`
 	Count            int64     `db:"count"`
@@ -153,6 +154,7 @@ func (ui *UserInstrument) CreateDomain() *domain.UserInstrument {
 	userInstrument := &domain.UserInstrument{
 		UserID: ui.UserID,
 		InstrumentIdentifiers: domain.InstrumentIdentifiers{
+			ID:     ui.InstrumentID,
 			Ticker: ui.InstrumentTicker,
 			Name:   ui.InstrumentName,
 		},
