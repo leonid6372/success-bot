@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"gopkg.in/telebot.v4"
@@ -71,11 +72,17 @@ func (b *Bot) portfolioInstrumentsListByPageKeyboard(
 	rows = b.addPaginationCbkButtons(rows, lang, cbkPortfolioPage, currentPage, pagesCount)
 
 	for _, instrument := range instruments {
+		diff := instrument.Last/instrument.AvgPrice*100 - 100
+
+		if instrument.Count < 0 {
+			diff = -diff
+		}
+
 		text := b.deps.dictionary.Text(lang, btnPortfolioInstrument, map[string]any{
-			"Ticker":            instrument.Ticker,
+			"Ticker":            strings.Split(instrument.Ticker, "@")[1],
 			"Count":             instrument.Count,
 			"AvgPrice":          instrument.AvgPrice,
-			"PercentDifference": instrument.Last/instrument.AvgPrice*100 - 100,
+			"PercentDifference": diff,
 		})
 		callbackData := fmt.Sprintf("%s|%s", cbkInstrument, instrument.Ticker)
 

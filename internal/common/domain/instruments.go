@@ -24,4 +24,6 @@ type InstrumentPrices struct {
 type Instrument struct {
 	InstrumentIdentifiers
 	InstrumentPrices
+
+	Decimals int32 `json:"decimals"`
 }

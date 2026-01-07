@@ -155,7 +155,7 @@ func (b *Bot) setupStopOutProcessor() {
 						userShort, err := b.deps.portfoliosRepository.GetUserMostExpensiveShort(b.ctx, topUser.ID)
 						if err != nil {
 							log.Error("failed to get user most expensive short",
-								zap.Int64("user_id", topUser.ID),
+								zap.String("username", topUser.Username),
 								zap.Error(err),
 							)
 
@@ -184,7 +184,7 @@ func (b *Bot) setupStopOutProcessor() {
 							b.ctx, topUser.ID, userShort.ID, closeCount, instrument.Last,
 						); err != nil {
 							log.Error("failed to buy instrument",
-								zap.Int64("user_id", topUser.ID),
+								zap.String("username", topUser.Username),
 								zap.String("ticker", userShort.Ticker),
 								zap.Error(err),
 							)
@@ -246,7 +246,7 @@ func (b *Bot) addPaginationCbkButtons(
 	if currentPage == 1 {
 		rows = append(rows, telebot.Row{
 			markup.Data(
-				b.deps.dictionary.Text(lang, btnNextPage),
+				b.deps.dictionary.Text(lang, btnNext),
 				fmt.Sprintf("%s|%d", cbkName, currentPage+1),
 			),
 		})
@@ -255,7 +255,7 @@ func (b *Bot) addPaginationCbkButtons(
 	if currentPage == pagesCount {
 		rows = append(rows, telebot.Row{
 			markup.Data(
-				b.deps.dictionary.Text(lang, btnPreviousPage),
+				b.deps.dictionary.Text(lang, btnPrevious),
 				fmt.Sprintf("%s|%d", cbkName, currentPage-1),
 			),
 		})
@@ -264,11 +264,11 @@ func (b *Bot) addPaginationCbkButtons(
 	if currentPage > 1 && currentPage < pagesCount {
 		rows = append(rows, telebot.Row{
 			markup.Data(
-				b.deps.dictionary.Text(lang, btnPreviousPage),
+				b.deps.dictionary.Text(lang, btnPrevious),
 				fmt.Sprintf("%s|%d", cbkName, currentPage-1),
 			),
 			markup.Data(
-				b.deps.dictionary.Text(lang, btnNextPage),
+				b.deps.dictionary.Text(lang, btnNext),
 				fmt.Sprintf("%s|%d", cbkName, currentPage+1),
 			),
 		})
