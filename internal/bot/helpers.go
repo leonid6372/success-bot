@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	_ "time/tzdata"
+
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/errs"
 	"github.com/leonid6372/success-bot/pkg/log"
