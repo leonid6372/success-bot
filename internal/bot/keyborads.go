@@ -119,7 +119,7 @@ func (b *Bot) instrumentsListByPageKeyboard(
 	return markup
 }
 
-func (b *Bot) instrumentKeyboard(lang string, instrument *domain.Instrument) *telebot.ReplyMarkup {
+func (b *Bot) instrumentKeyboard(lang string) *telebot.ReplyMarkup {
 	markup := &telebot.ReplyMarkup{}
 
 	btnBuy := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy)}

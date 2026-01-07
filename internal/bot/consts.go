@@ -22,6 +22,7 @@ const (
 	msgInstrument           = "instrument"
 	msgLastPrice            = "last_price"
 	msgInstrumentExit       = "instrument_exit"
+	msgFAQ                  = "faq"
 	msgTopUsersFirstPage    = "top_users_first_page"
 	msgTopUsers             = "top_users"
 	msgEnterPromocode       = "enter_promocode"

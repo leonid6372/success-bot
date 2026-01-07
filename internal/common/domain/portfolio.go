@@ -7,6 +7,7 @@ import (
 
 type PortfolioRepository interface {
 	GetUsersInstrumentsCount(ctx context.Context) (int64, error)
+	GetUsersInstrumentTickers(ctx context.Context) ([]string, error)
 	GetUserPortfolioPagesCount(ctx context.Context, userID int64) (int64, error)
 	GetUserPortfolioByPage(ctx context.Context, userID int64, currentPage int64) ([]*UserInstrument, error)
 	GetUserMostExpensiveShort(ctx context.Context, userID int64) (*UserInstrument, error)
