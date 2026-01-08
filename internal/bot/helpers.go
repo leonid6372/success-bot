@@ -149,7 +149,7 @@ func (b *Bot) setupDailyProcessor() {
 	moscow, _ := time.LoadLocation("Europe/Moscow")
 	t := time.Now().In(moscow)
 
-	dailyRewardT := t
+	dailyRewardT := t.Add(24 * time.Hour) // daily reawrd start tomorrow
 	stopOutT := t
 
 	for {
