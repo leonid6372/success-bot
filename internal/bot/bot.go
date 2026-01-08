@@ -87,7 +87,7 @@ func New(ctx context.Context,
 	bot.setupCallbackRoutes()
 
 	go bot.setupCacheUpdater()
-	go bot.setupStopOutProcessor()
+	go bot.setupDailyProcessor()
 
 	return bot, nil
 }
@@ -133,6 +133,7 @@ func (b *Bot) setupMessageRoutes() {
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}, b.topUsersHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnBuy)}, b.buyHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSell)}, b.sellHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnDailyReward)}, b.dailyRewardHandler)
 	}
 }
 

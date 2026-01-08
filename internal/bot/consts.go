@@ -41,11 +41,14 @@ const (
 	msgOperationSell        = "operation_sell"
 	msgOperationFee         = "operation_fee"
 	msgOperationPromocode   = "operation_promocode"
+	msgOperationDailyReward = "operation_daily_reward"
 	msgPortfolio            = "portfolio"
 	msgEmptyPortfolio       = "empty_portfolio"
 	msgMarginCall           = "margin_call"
 	msgMarginCallWarning    = "margin_call_warning"
 	msgClosedExchange       = "closed_exchange"
+	msgDailyReward          = "daily_reward"
+	msgDailyRewardClaimed   = "daily_reward_claimed"
 )
 
 const (
@@ -65,4 +68,5 @@ const (
 	btnBuy                 = "button_buy"
 	btnSell                = "button_sell"
 	btnPortfolioInstrument = "button_portfolio_instrument"
+	btnDailyReward         = "button_daily_reward"
 )

@@ -35,6 +35,7 @@ type Bot struct {
 	APIKey              string        `yaml:"api_key" env:"BOT_API_KEY" env-upd:""`
 	Timeout             time.Duration `yaml:"timeout" env:"BOT_TIMEOUT" env-upd:""`
 	Languages           []string      `yaml:"languages" env:"BOT_LANGUAGES" env-upd:""`
+	DailyReward         float64       `yaml:"daily_reward" env:"BOT_DAILY_REWARD" env-upd:""`
 	SubscribeChannelID  int64         `yaml:"subscribe_channel_id" env:"BOT_SUBSCRIBE_CHANNEL_ID" env-upd:""`
 	SubscribeChannelURL string        `yaml:"subscribe_channel_url" env:"BOT_SUBSCRIBE_CHANNEL_URL" env-upd:""`
 }

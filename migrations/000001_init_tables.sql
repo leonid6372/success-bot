@@ -82,7 +82,7 @@ create table if not exists success_bot.operations
 
     user_id                 bigint                          not null,
     instrument_id           bigint                          not null, -- id value from instruments table or promocodes table up to type
-    type                    varchar(16)                     not null, -- e.g., 'buy', 'sell', 'fee', 'promocode'
+    type                    varchar(16)                     not null, -- e.g., 'buy', 'sell', 'fee', 'promocode', 'daily_reward'
 
     count                   int                             not null,
     price                   numeric(15, 6)                  not null,

@@ -35,7 +35,9 @@ func (or *operationsRepository) GetOperationsByPage(ctx context.Context, userID,
 	query := `SELECT o.id,
 			o.parent_id,
 			o.type,
-			CASE WHEN o.type = 'promocode' THEN p.value ELSE i.name END as name,
+			CASE
+				WHEN o.type = 'promocode' OR o.type = 'daily_reward' THEN p.value
+			ELSE i.name END as name,
 			o.count,
 			o.total_amount,
 			o.created_at

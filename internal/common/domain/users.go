@@ -16,6 +16,8 @@ type UsersRepository interface {
 	GetUserByID(ctx context.Context, id int64) (*User, error)
 	GetUsersCount(ctx context.Context) (int64, error)
 	GetTopUsersData(ctx context.Context) ([]*TopUserData, error)
+	GetUsersClaimedDailyReward(ctx context.Context) ([]*User, error)
+	ResetDailyReward(ctx context.Context) error
 	// UpdateUserTGData updates username, first name, last name and is_premium fields of the user.
 	UpdateUserTGData(ctx context.Context, user *User) error
 	UpdateUserLanguage(ctx context.Context, userID int64, languageCode string) error
@@ -24,6 +26,7 @@ type UsersRepository interface {
 	UpdateUserBalancesAndMarginCall(
 		ctx context.Context, userID int64, availableBalance float64, blockedBalanceDelta *float64, marginCall *bool,
 	) error
+	ClaimDailyReward(ctx context.Context, userID int64, amount float64) error
 }
 
 type Metadata struct {
@@ -48,6 +51,8 @@ type User struct {
 	AvailableBalance float64 `json:"available_balance"`
 	BlockedBalance   float64 `json:"blocked_balance"`
 	MarginCall       bool    `json:"margin_call"`
+
+	DailyReward bool `json:"daily_reward"`
 
 	Metadata Metadata `json:"metadata"`
 

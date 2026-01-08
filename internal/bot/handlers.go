@@ -12,6 +12,7 @@ import (
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
 	"github.com/leonid6372/success-bot/pkg/errs"
+	"github.com/leonid6372/success-bot/pkg/format"
 	"github.com/leonid6372/success-bot/pkg/log"
 	"go.uber.org/zap"
 	"gopkg.in/telebot.v4"
@@ -203,6 +204,9 @@ func (b *Bot) portfolioHandler(c telebot.Context) error {
 	ctx := c.Get(ctxContext).(context.Context)
 	user := b.mustUser(c)
 
+	user.Metadata.InputType = ""
+	user.Metadata.InstrumentOperation = ""
+
 	if user.Metadata.InstrumentDone != nil {
 		if err := b.closeInstrument(c, user); err != nil {
 			return errs.NewStack(err)
@@ -278,6 +282,9 @@ func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 
 	ctx := c.Get(ctxContext).(context.Context)
 	user := b.mustUser(c)
+
+	user.Metadata.InputType = ""
+	user.Metadata.InstrumentOperation = ""
 
 	if user.Metadata.InstrumentDone != nil {
 		if err := b.closeInstrument(c, user); err != nil {
@@ -375,12 +382,6 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 					log.Error("failed to get instrument info", zap.String("username", user.Username), zap.Error(err))
 				}
 
-				instrumentInfo, err := b.deps.finam.GetInstrumentInfo(b.ctx, ticker)
-				if err != nil {
-					log.Error("failed to get instrument info", zap.String("username", user.Username), zap.Error(err))
-					continue
-				}
-
 				// Skip if price didn't change
 				if prevPrice == instrumentPrices.Last {
 					continue
@@ -396,7 +397,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 				text := b.deps.dictionary.Text(user.LanguageCode, msgLastPrice, map[string]any{
 					"Color": color,
-					"Price": fmt.Sprintf(`%.*f`, instrumentInfo.Decimals, instrumentPrices.Last),
+					"Price": format.PrettyNumber(instrumentPrices.Last, " ", ",", true),
 				})
 
 				if instrumentPrices.Ask == 0 && instrumentPrices.Bid == 0 {
@@ -447,6 +448,9 @@ func (b *Bot) enterPromocodeHandler(c telebot.Context) error {
 func (b *Bot) faqHandler(c telebot.Context) error {
 	user := b.mustUser(c)
 
+	user.Metadata.InputType = ""
+	user.Metadata.InstrumentOperation = ""
+
 	text := b.deps.dictionary.Text(user.LanguageCode, msgFAQ)
 
 	if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
@@ -460,6 +464,9 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 	defer c.Respond()
 
 	user := b.mustUser(c)
+
+	user.Metadata.InputType = ""
+	user.Metadata.InstrumentOperation = ""
 
 	currentPage, err := b.getCurrentPage(c)
 	if err != nil {
@@ -671,7 +678,7 @@ func (b *Bot) inputCountToSell(c telebot.Context) error {
 	txtCount := c.Text()
 
 	count, err := strconv.ParseInt(txtCount, 10, 64)
-	if err != nil {
+	if err != nil || count <= 0 {
 		text := b.deps.dictionary.Text(user.LanguageCode, msgInvalidCount)
 
 		if err := c.Send(text); err != nil {
@@ -718,6 +725,9 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 
 	ctx := c.Get(ctxContext).(context.Context)
 	user := b.mustUser(c)
+
+	user.Metadata.InputType = ""
+	user.Metadata.InstrumentOperation = ""
 
 	currentPage, err := b.getCurrentPage(c)
 	if err != nil {
@@ -772,6 +782,11 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 		case domain.OperationTypePromocode:
 			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationPromocode, map[string]any{
 				"Name":   op.InstrumentName,
+				"Amount": op.TotalAmount,
+			}))
+
+		case domain.OperationTypeDailyReward:
+			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationDailyReward, map[string]any{
 				"Amount": op.TotalAmount,
 			}))
 
@@ -856,6 +871,30 @@ func (b *Bot) sellHandler(c telebot.Context) error {
 	})
 
 	if err := c.Send(text); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
+
+	return nil
+}
+
+func (b *Bot) dailyRewardHandler(c telebot.Context) error {
+	user := b.mustUser(c)
+
+	// update postgres data
+	if err := b.deps.usersRepository.ClaimDailyReward(b.ctx, user.ID, b.cfg.DailyReward); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to claim daily reward: %v", err))
+	}
+
+	// update cache data
+	user.AvailableBalance += b.cfg.DailyReward
+
+	text := b.deps.dictionary.Text(user.LanguageCode, msgDailyRewardClaimed, map[string]any{
+		"AvailableBalance": user.AvailableBalance,
+	})
+
+	markup := b.mainMenuKeyboard(user.LanguageCode)
+
+	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 
