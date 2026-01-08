@@ -663,7 +663,7 @@ func (b *Bot) inputCountToBuy(c telebot.Context) error {
 			"Price":          user.Metadata.InstrumentBuyPrice,
 		})
 	default:
-		return errs.NewStack(fmt.Errorf("failed to apply promocode: %v", err))
+		return errs.NewStack(fmt.Errorf("failed to buy instrument: %v", err))
 	}
 
 	user.Metadata.InputType = ""
@@ -712,7 +712,7 @@ func (b *Bot) inputCountToSell(c telebot.Context) error {
 			"Price":          user.Metadata.InstrumentSellPrice,
 		})
 	default:
-		return errs.NewStack(fmt.Errorf("failed to apply promocode: %v", err))
+		return errs.NewStack(fmt.Errorf("failed sell instrument: %v", err))
 	}
 
 	user.Metadata.InputType = ""

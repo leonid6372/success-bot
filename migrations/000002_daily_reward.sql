@@ -3,8 +3,8 @@
 
 alter table success_bot.users add column if not exists daily_reward boolean default false not null;
 
-insert into success_bot.promocodes(available_count, value, bonus_amount) values
-    (-1, '🎁 Ежедневная награда', 1000);
+insert into success_bot.promocodes(id, available_count, value, bonus_amount) values
+    (-1, -1, '🎁 Ежедневная награда', 1000);
 
 -- +goose StatementEnd
 
