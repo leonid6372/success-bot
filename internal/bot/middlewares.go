@@ -99,21 +99,23 @@ func (b *Bot) subscribeMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc 
 }
 
 func (b *Bot) checkSubscription(channelID int64, userID int64) (bool, error) {
-	chat := &telebot.Chat{ID: channelID}
-	user := &telebot.User{ID: userID}
+	// chat := &telebot.Chat{ID: channelID}
+	// user := &telebot.User{ID: userID}
 
-	member, err := b.Telebot.ChatMemberOf(chat, user)
-	if err != nil {
-		if strings.Contains(err.Error(), "user not found") {
-			return false, nil
-		}
+	// member, err := b.Telebot.ChatMemberOf(chat, user)
+	// if err != nil {
+	// 	if strings.Contains(err.Error(), "user not found") {
+	// 		return false, nil
+	// 	}
 
-		return false, errs.NewStack(err)
-	}
+	// 	return false, errs.NewStack(err)
+	// }
 
-	return member.Role == telebot.Creator ||
-		member.Role == telebot.Administrator ||
-		member.Role == telebot.Member, nil
+	// return member.Role == telebot.Creator ||
+	// 	member.Role == telebot.Administrator ||
+	// 	member.Role == telebot.Member, nil
+
+	return true, nil
 }
 
 func (b *Bot) selectUserMiddleware(next telebot.HandlerFunc) telebot.HandlerFunc {

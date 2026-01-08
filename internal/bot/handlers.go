@@ -181,6 +181,9 @@ func (b *Bot) checkSubscriptionHandler(c telebot.Context) error {
 func (b *Bot) mainMenuHandler(c telebot.Context) error {
 	user := b.mustUser(c)
 
+	user.Metadata.InputType = ""
+	user.Metadata.InstrumentOperation = ""
+
 	if user.Metadata.InstrumentDone != nil {
 		if err := b.closeInstrument(c, user); err != nil {
 			return errs.NewStack(err)
@@ -331,6 +334,9 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 	defer c.Respond()
 
 	user := b.mustUser(c)
+
+	user.Metadata.InputType = ""
+	user.Metadata.InstrumentOperation = ""
 
 	if user.Metadata.InstrumentDone != nil {
 		if err := b.closeInstrument(c, user); err != nil {
@@ -879,6 +885,15 @@ func (b *Bot) sellHandler(c telebot.Context) error {
 
 func (b *Bot) dailyRewardHandler(c telebot.Context) error {
 	user := b.mustUser(c)
+
+	user.Metadata.InputType = ""
+	user.Metadata.InstrumentOperation = ""
+
+	if user.Metadata.InstrumentDone != nil {
+		if err := b.closeInstrument(c, user); err != nil {
+			return errs.NewStack(err)
+		}
+	}
 
 	// update postgres data
 	if err := b.deps.usersRepository.ClaimDailyReward(b.ctx, user.ID, b.cfg.DailyReward); err != nil {
