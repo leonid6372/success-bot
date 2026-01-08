@@ -149,3 +149,15 @@ func (b *Bot) paginationKeyboard(lang string, callback string, currentPage, page
 	markup.Inline(rows...)
 	return markup
 }
+
+func (b *Bot) dailyRewardKeyboard(lang string) *telebot.ReplyMarkup {
+	markup := &telebot.ReplyMarkup{}
+
+	btnDailyReward := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnDailyReward)}
+
+	rows := []telebot.Row{{btnDailyReward}}
+
+	markup.Reply(rows...)
+	markup.ResizeKeyboard = true
+	return markup
+}

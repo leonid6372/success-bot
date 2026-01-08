@@ -6,8 +6,9 @@ const (
 	ReviewInstrumentsPerPage    = 10
 	PortfolioInstrumentsPerPage = 5
 
-	OperationTypeBuy       = "buy"
-	OperationTypeSell      = "sell"
-	OperationTypeFee       = "fee"
-	OperationTypePromocode = "promocode"
+	OperationTypeBuy         = "buy"
+	OperationTypeSell        = "sell"
+	OperationTypeFee         = "fee"
+	OperationTypePromocode   = "promocode"
+	OperationTypeDailyReward = "daily_reward"
 )

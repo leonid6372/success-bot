@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func PrettyNumber(number any, separator, decimalSeparator string) string {
+func PrettyNumber(number any, separator, decimalSeparator string, originalDecimals bool) string {
 	var numStr string
 	isNegative := false
 
@@ -16,7 +16,12 @@ func PrettyNumber(number any, separator, decimalSeparator string) string {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		numStr = fmt.Sprintf("%d", number)
 	case float32, float64:
-		numStr = fmt.Sprintf("%.2f", number)
+		if originalDecimals {
+			n := decimalsCount(number)
+			numStr = fmt.Sprintf("%.*f", n, number)
+		} else {
+			numStr = fmt.Sprintf("%.2f", number)
+		}
 	default:
 		log.Error("PrettyNumber: unsupported type",
 			zap.Any("value", number),
@@ -75,4 +80,16 @@ func PrettyNumber(number any, separator, decimalSeparator string) string {
 	}
 
 	return intPart.String() + decimalPart
+}
+
+func decimalsCount(f any) int {
+	str := fmt.Sprintf("%f", f)
+
+	str = strings.TrimRight(str, "0")
+
+	if dot := strings.Index(str, "."); dot != -1 {
+		return len(str) - dot - 1
+	}
+
+	return 0
 }

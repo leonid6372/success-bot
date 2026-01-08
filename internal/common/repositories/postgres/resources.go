@@ -19,6 +19,8 @@ type User struct {
 	BlockedBalance   float64 `db:"blocked_balance"`
 	MarginCall       bool    `db:"margin_call"`
 
+	DailyReward bool `db:"daily_reward"`
+
 	UpdatedAt time.Time `db:"updated_at"`
 	CreatedAt time.Time `db:"created_at"`
 }
@@ -34,6 +36,7 @@ func (u *User) CreateDomain() *domain.User {
 		AvailableBalance: u.AvailableBalance,
 		BlockedBalance:   u.BlockedBalance,
 		MarginCall:       u.MarginCall,
+		DailyReward:      u.DailyReward,
 		CreatedAt:        u.CreatedAt,
 		UpdatedAt:        u.UpdatedAt,
 	}

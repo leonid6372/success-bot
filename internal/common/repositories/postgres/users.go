@@ -10,6 +10,8 @@ import (
 	"github.com/leonid6372/success-bot/internal/boterrs"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/errs"
+	"github.com/leonid6372/success-bot/pkg/log"
+	"go.uber.org/zap"
 )
 
 type usersRepository struct {
@@ -57,6 +59,7 @@ func (ur *usersRepository) GetUserByID(ctx context.Context, id int64) (*domain.U
     		available_balance,
 			blocked_balance,
 			margin_call,
+			daily_reward,
     		created_at,
     		updated_at
 		FROM success_bot.users WHERE id = $1`
@@ -71,6 +74,7 @@ func (ur *usersRepository) GetUserByID(ctx context.Context, id int64) (*domain.U
 		&user.AvailableBalance,
 		&user.BlockedBalance,
 		&user.MarginCall,
+		&user.DailyReward,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	); err != nil {
@@ -137,6 +141,63 @@ func (ur *usersRepository) GetTopUsersData(ctx context.Context) ([]*domain.TopUs
 	return topUsersData, nil
 }
 
+func (ur *usersRepository) GetUsersClaimedDailyReward(ctx context.Context) ([]*domain.User, error) {
+	query := `SELECT
+			id,
+			username,
+			first_name,
+			last_name,
+			language_code,
+			is_premium,
+			available_balance,
+			blocked_balance,
+			margin_call,
+			daily_reward,
+			created_at,
+			updated_at
+		FROM success_bot.users WHERE daily_reward = FALSE`
+	rows, err := ur.psql.Query(ctx, query)
+	if err != nil {
+		return nil, errs.NewStack(err)
+	}
+	defer rows.Close()
+
+	users := []*domain.User{}
+	for rows.Next() {
+		user := &User{}
+		if err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.FirstName,
+			&user.LastName,
+			&user.LanguageCode,
+			&user.IsPremium,
+			&user.AvailableBalance,
+			&user.BlockedBalance,
+			&user.MarginCall,
+			&user.DailyReward,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		); err != nil {
+			return nil, errs.NewStack(err)
+		}
+
+		users = append(users, user.CreateDomain())
+	}
+
+	return users, nil
+}
+
+func (ur *usersRepository) ResetDailyReward(ctx context.Context) error {
+	query := `UPDATE success_bot.users SET daily_reward = TRUE`
+	_, err := ur.psql.Exec(ctx, query)
+	if err != nil {
+		return errs.NewStack(err)
+	}
+
+	return nil
+}
+
 // UpdateUserTGData updates username, first name, last name and is_premium fields of the user.
 func (ur *usersRepository) UpdateUserTGData(ctx context.Context, user *domain.User) error {
 	query := `UPDATE success_bot.users
@@ -190,6 +251,48 @@ func (ur *usersRepository) UpdateUserBalancesAndMarginCall(
 
 	_, err := ur.psql.Exec(ctx, query, args...)
 	if err != nil {
+		return errs.NewStack(err)
+	}
+
+	return nil
+}
+
+func (ur *usersRepository) ClaimDailyReward(ctx context.Context, userID int64, amount float64) error {
+	tx, err := ur.psql.Begin(ctx)
+	if err != nil {
+		return errs.NewStack(err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			log.Error("failed to rollback transaction", zap.Error(err))
+		}
+	}()
+
+	query := `SELECT daily_reward FROM success_bot.users WHERE id = $1 FOR UPDATE`
+	var dailyReward bool
+	if err := tx.QueryRow(ctx, query, userID).Scan(&dailyReward); err != nil {
+		return errs.NewStack(err)
+	}
+
+	if !dailyReward {
+		return errs.NewStack(boterrs.ErrUnavailableDailyReward)
+	}
+
+	query = `UPDATE success_bot.users
+		SET available_balance = available_balance + $1, daily_reward = FALSE
+		WHERE id = $2`
+	_, err = tx.Exec(ctx, query, amount, userID)
+	if err != nil {
+		return errs.NewStack(err)
+	}
+
+	query = `INSERT INTO success_bot.operations(user_id, instrument_id, type, count, price, total_amount)
+		VALUES ($1, -1, 'daily_reward', 1, $2, $2)`
+	if _, err = tx.Exec(ctx, query, userID, amount); err != nil {
+		return errs.NewStack(err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return errs.NewStack(err)
 	}
 

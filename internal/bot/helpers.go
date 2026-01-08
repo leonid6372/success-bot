@@ -143,13 +143,21 @@ func (b *Bot) setupCacheUpdater() {
 	}
 }
 
-func (b *Bot) setupStopOutProcessor() {
+// setupDailyProcessor setups a goroutine that processes daily tasks at 23:45 Moscow time.
+// It processes stop-out for users with margin call and daily reward messages.
+func (b *Bot) setupDailyProcessor() {
 	moscow, _ := time.LoadLocation("Europe/Moscow")
 	t := time.Now().In(moscow)
 
+	dailyRewardT := t
+	stopOutT := t
+
 	for {
-		startAt := time.Date(t.Year(), t.Month(), t.Day(), 23, 45, 0, 0, moscow)
-		startCh := time.NewTimer(time.Until(startAt))
+		dailyRewardAt := time.Date(dailyRewardT.Year(), dailyRewardT.Month(), dailyRewardT.Day(), 8, 0, 0, 0, moscow)
+		dailyRewardCh := time.NewTimer(time.Until(dailyRewardAt))
+
+		stopOutAt := time.Date(stopOutT.Year(), stopOutT.Month(), stopOutT.Day(), 23, 45, 0, 0, moscow)
+		stopOutCh := time.NewTimer(time.Until(stopOutAt))
 
 	outerLoop:
 		for {
@@ -158,7 +166,38 @@ func (b *Bot) setupStopOutProcessor() {
 				log.Info("stop-out processor shutting down...")
 				return
 
-			case <-startCh.C:
+			case <-dailyRewardCh.C:
+				users, err := b.deps.usersRepository.GetUsersClaimedDailyReward(b.ctx)
+				if err != nil {
+					log.Error("failed to get users claimed daily reward", zap.Error(err))
+					continue
+				}
+
+				if err := b.deps.usersRepository.ResetDailyReward(b.ctx); err != nil {
+					log.Error("failed to reset daily reward for all users", zap.Error(err))
+					continue
+				}
+
+				for _, user := range users {
+					text := b.deps.dictionary.Text(user.LanguageCode, msgDailyReward, map[string]any{
+						"Amount": b.cfg.DailyReward,
+					})
+
+					markup := b.dailyRewardKeyboard(user.LanguageCode)
+
+					if _, err := b.Telebot.Send(&telebot.User{ID: user.ID},
+						text,
+						&telebot.SendOptions{ReplyMarkup: markup, ParseMode: telebot.ModeHTML},
+					); err != nil {
+						log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
+					}
+				}
+
+				dailyRewardT = dailyRewardT.Add(24 * time.Hour)
+
+				break outerLoop
+
+			case <-stopOutCh.C:
 				b.mu.RLock()
 				for _, topUser := range b.topUsers {
 					if topUser.MarginCall {
@@ -205,11 +244,11 @@ func (b *Bot) setupStopOutProcessor() {
 				}
 
 				b.mu.RUnlock()
+
+				stopOutT = stopOutT.Add(24 * time.Hour)
+
+				break outerLoop
 			}
-
-			t = t.Add(24 * time.Hour)
-
-			break outerLoop
 		}
 	}
 }
