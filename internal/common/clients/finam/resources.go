@@ -31,6 +31,7 @@ func (res *getInstrumentInfoResponse) CreateDomain() *domain.Instrument {
 	return &domain.Instrument{
 		InstrumentIdentifiers: domain.InstrumentIdentifiers{
 			Ticker: res.AssetInfo.Ticker,
+			Name:   res.AssetInfo.Name,
 		},
 		Decimals: res.AssetInfo.Decimals,
 	}

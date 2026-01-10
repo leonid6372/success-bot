@@ -20,6 +20,25 @@ func NewInstrumentsRepository(pool *pgxpool.Pool) domain.InstrumentsRepository {
 	}
 }
 
+func (ir *instrumentsRepository) CreateInstrument(ctx context.Context, ticker, name string) (*domain.Instrument, error) {
+	query := `INSERT INTO success_bot.instruments (ticker, name)
+		VALUES ($1, $2)
+		RETURNING
+			id,
+			ticker,
+			name`
+	instrument := &Instrument{}
+	if err := ir.psql.QueryRow(ctx, query, ticker, name).Scan(
+		&instrument.ID,
+		&instrument.Ticker,
+		&instrument.Name,
+	); err != nil {
+		return nil, errs.NewStack(err)
+	}
+
+	return instrument.CreateDomain(), nil
+}
+
 func (ir *instrumentsRepository) GetInstrumentByTicker(ctx context.Context, ticker string) (*domain.Instrument, error) {
 	query := `SELECT
 			id,
@@ -33,6 +52,10 @@ func (ir *instrumentsRepository) GetInstrumentByTicker(ctx context.Context, tick
 		&instrument.Ticker,
 		&instrument.Name,
 	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pgx.ErrNoRows
+		}
+
 		return nil, errs.NewStack(err)
 	}
 

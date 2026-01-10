@@ -2,6 +2,7 @@ package finam
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Ruvad39/go-finam-rest"
 	"github.com/leonid6372/success-bot/internal/common/domain"
@@ -45,6 +46,10 @@ func (c *Client) GetInstrumentInfo(ctx context.Context, ticker string) (*domain.
 
 	res.AssetInfo, err = c.Client.NewAssetInfoRequest(ticker, c.accountID).Do(ctx)
 	if err != nil {
+		if errors.Is(err, finam.ErrNotFound) {
+			return nil, finam.ErrNotFound
+		}
+
 		return nil, errs.NewStack(err)
 	}
 

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ruvad39/go-finam-rest"
+	"github.com/jackc/pgx/v5"
 	"github.com/leonid6372/success-bot/internal/boterrs"
 	"github.com/leonid6372/success-bot/internal/common/domain"
 	"github.com/leonid6372/success-bot/pkg/dictionary"
@@ -258,7 +260,7 @@ func (b *Bot) portfolioHandler(c telebot.Context) error {
 	}
 
 	for _, instrument := range instruments {
-		prices, err := b.getInstrumentPrices(ctx, instrument.Ticker)
+		prices, err := b.getUserInstrumentPrices(ctx, instrument.Ticker)
 		if err != nil {
 			return errs.NewStack(fmt.Errorf("failed to get instrument prices: %v", err))
 		}
@@ -313,7 +315,7 @@ func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 	text := b.deps.dictionary.Text(user.LanguageCode, msgInstrumentsList, map[string]any{
 		"CurrentPage":             currentPage,
 		"PagesCount":              pagesCount,
-		"ButtonInstrumentsSearch": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentsSearch),
+		"ButtonInstrumentsSearch": b.deps.dictionary.Text(user.LanguageCode, btnInstrumentSearch),
 	})
 
 	markup := b.instrumentsListByPageKeyboard(
@@ -457,7 +459,9 @@ func (b *Bot) faqHandler(c telebot.Context) error {
 	user.Metadata.InputType = ""
 	user.Metadata.InstrumentOperation = ""
 
-	text := b.deps.dictionary.Text(user.LanguageCode, msgFAQ)
+	text := b.deps.dictionary.Text(user.LanguageCode, msgFAQ, map[string]any{
+		"TGChannelURL": b.cfg.SubscribeChannelURL,
+	})
 
 	if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
@@ -573,8 +577,8 @@ func (b *Bot) textHandler(c telebot.Context) error {
 	switch user.Metadata.InputType {
 	case domain.InputTypePromocode:
 		return b.inputPromocode(c)
-	// case domain.InputTypeTicker:
-	// return b.inputTicker(c)
+	case domain.InputTypeTicker:
+		return b.inputTicker(c)
 	case domain.InputTypeCount:
 		switch user.Metadata.InstrumentOperation {
 		case domain.OperationTypeBuy:
@@ -720,6 +724,64 @@ func (b *Bot) inputCountToSell(c telebot.Context) error {
 	user.Metadata.InstrumentOperation = ""
 
 	if err := c.Send(text); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
+
+	return nil
+}
+
+func (b *Bot) inputTicker(c telebot.Context) error {
+	ctx := c.Get(ctxContext).(context.Context)
+	user := b.mustUser(c)
+	defer func() {
+		user.Metadata.InputType = ""
+	}()
+
+	ticker := fmt.Sprintf("%s@MISX", strings.ToUpper(c.Text()))
+
+	instrument, err := b.deps.instrumentsRepository.GetInstrumentByTicker(ctx, ticker)
+	if err == nil {
+		text := b.deps.dictionary.Text(user.LanguageCode, msgInstrumentFound)
+
+		markup := b.instrumentsListByPageKeyboard(user.LanguageCode, []*domain.Instrument{instrument}, 1, 1)
+
+		if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
+			return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+		}
+
+		return nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return errs.NewStack(fmt.Errorf("failed to check instrument exists by ticker: %v", err))
+	}
+
+	// search in finam if ErrNoRows from repository
+	info, err := b.deps.finam.GetInstrumentInfo(ctx, ticker)
+	if err != nil {
+		if errors.Is(err, finam.ErrNotFound) {
+			text := b.deps.dictionary.Text(user.LanguageCode, msgInstrumentNotFound)
+
+			if err := c.Send(text); err != nil {
+				return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+			}
+
+			return nil
+		}
+
+		return errs.NewStack(fmt.Errorf("failed to get instrument info: %v", err))
+	}
+
+	instrumentName := fmt.Sprintf("❔ %s", info.Name)
+	instrument, err = b.deps.instrumentsRepository.CreateInstrument(ctx, ticker, instrumentName)
+	if err != nil {
+		return errs.NewStack(fmt.Errorf("failed to create instrument: %v", err))
+	}
+
+	text := b.deps.dictionary.Text(user.LanguageCode, msgInstrumentFound)
+
+	markup := b.instrumentsListByPageKeyboard(user.LanguageCode, []*domain.Instrument{instrument}, 1, 1)
+
+	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 
@@ -910,6 +972,20 @@ func (b *Bot) dailyRewardHandler(c telebot.Context) error {
 	markup := b.mainMenuKeyboard(user.LanguageCode)
 
 	if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
+		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
+	}
+
+	return nil
+}
+
+func (b *Bot) instrumentSearchHandler(c telebot.Context) error {
+	user := b.mustUser(c)
+
+	user.Metadata.InputType = domain.InputTypeTicker
+
+	text := b.deps.dictionary.Text(user.LanguageCode, msgEnterTicker)
+
+	if err := c.Send(text); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 

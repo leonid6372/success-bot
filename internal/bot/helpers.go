@@ -39,7 +39,7 @@ func (b *Bot) setupCacheUpdater() {
 					continue
 				}
 
-				b.instruments.SetDefault(ticker, instrument)
+				b.usersInstruments.SetDefault(ticker, instrument)
 			}
 
 			usersCount, err := b.deps.usersRepository.GetUsersCount(b.ctx)
@@ -73,7 +73,7 @@ func (b *Bot) setupCacheUpdater() {
 					continue
 				}
 
-				instrument, err := b.getInstrumentPrices(b.ctx, data.Ticker)
+				instrument, err := b.getUserInstrumentPrices(b.ctx, data.Ticker)
 				if err != nil {
 					log.Error("failed to get instrument prices", zap.String("ticker", data.Ticker), zap.Error(err))
 					continue

@@ -14,7 +14,7 @@ func (b *Bot) mainMenuKeyboard(lang string) *telebot.ReplyMarkup {
 	btnPortfolio := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}
 	btnOperations := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnOperations)}
 	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
-	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsSearch)}
+	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentSearch)}
 	btnEnterPromocode := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}
 	btnFAQ := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}
 	btnTopUsers := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}
@@ -126,7 +126,7 @@ func (b *Bot) instrumentKeyboard(lang string) *telebot.ReplyMarkup {
 	btnSell := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnSell)}
 	btnPortfolio := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}
 	btnInstrumentsList := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}
-	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsSearch)}
+	btnInstrumentsSearch := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentSearch)}
 	btnMainMenu := telebot.Btn{Text: b.deps.dictionary.Text(lang, btnMainMenu)}
 
 	rows := []telebot.Row{

@@ -23,8 +23,8 @@ type Bot struct {
 	cfg *config.Bot
 	ctx context.Context
 
-	users       *cache.Cache[int64]  // tgID -> *domain.User
-	instruments *cache.Cache[string] // ticker -> *domain.Instrument (only with prices data)
+	users            *cache.Cache[int64]  // tgID -> *domain.User
+	usersInstruments *cache.Cache[string] // ticker -> *domain.Instrument (only with prices data)
 
 	topUsers []*domain.TopUser // sorted by live-balance descending
 	mu       sync.RWMutex
@@ -62,11 +62,11 @@ func New(ctx context.Context,
 	}
 
 	bot := &Bot{
-		Telebot:     b,
-		cfg:         cfg,
-		ctx:         ctx,
-		users:       cache.New[int64](16*time.Minute, 8*time.Minute),
-		instruments: cache.New[string](1*time.Minute, 30*time.Second),
+		Telebot:          b,
+		cfg:              cfg,
+		ctx:              ctx,
+		users:            cache.New[int64](16*time.Minute, 8*time.Minute),
+		usersInstruments: cache.New[string](1*time.Minute, 30*time.Second),
 		deps: &Dependencies{
 			finam:                 finam,
 			dictionary:            dictionary,
@@ -128,6 +128,7 @@ func (b *Bot) setupMessageRoutes() {
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnPortfolio)}, b.portfolioHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnOperations)}, b.operationsHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentsList)}, b.instrumentsListHandler)
+		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnInstrumentSearch)}, b.instrumentSearchHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnEnterPromocode)}, b.enterPromocodeHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnFAQ)}, b.faqHandler)
 		message.Handle(&telebot.Btn{Text: b.deps.dictionary.Text(lang, btnTopUsers)}, b.topUsersHandler)
@@ -167,8 +168,8 @@ func (b *Bot) mustUser(c telebot.Context) *domain.User {
 	return user.(*domain.User)
 }
 
-func (b *Bot) getInstrumentPrices(ctx context.Context, ticker string) (*domain.Instrument, error) {
-	instrument, ok := b.instruments.Get(ticker)
+func (b *Bot) getUserInstrumentPrices(ctx context.Context, ticker string) (*domain.Instrument, error) {
+	instrument, ok := b.usersInstruments.Get(ticker)
 	if ok {
 		return instrument.(*domain.Instrument), nil
 	}
@@ -178,7 +179,7 @@ func (b *Bot) getInstrumentPrices(ctx context.Context, ticker string) (*domain.I
 		return nil, errs.NewStack(err)
 	}
 
-	b.instruments.SetDefault(ticker, instrument)
+	b.usersInstruments.SetDefault(ticker, instrument)
 
 	return instrument.(*domain.Instrument), nil
 }
