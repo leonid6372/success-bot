@@ -112,7 +112,7 @@ func (b *Bot) setupMiddlewares() {
 		b.timeoutMiddleware,
 		b.updateUserInfoMiddleware,
 		b.selectUserMiddleware,
-		b.subscribeMiddleware,
+		// b.subscribeMiddleware,
 	)
 }
 
