@@ -143,6 +143,7 @@ func (b *Bot) setupCallbackRoutes() {
 
 	callback.Handle(&telebot.Btn{Unique: cbkLanguage}, b.setLanguageHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkCheckSubscription}, b.checkSubscriptionHandler)
+	callback.Handle(&telebot.Btn{Unique: cbkPortfolioPage}, b.portfolioHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkInstrumentsPage}, b.instrumentsListHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkInstrument}, b.instrumentHandler)
 	callback.Handle(&telebot.Btn{Unique: cbkTopUsersPage}, b.topUsersHandler)
