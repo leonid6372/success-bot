@@ -6,7 +6,7 @@ postgres:
   schema: success_bot
   username: admin
   password: 1111
-  database: success-bot
+  database: demo-success-bot
 
 bot:
   api_key: prod_api_key

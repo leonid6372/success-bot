@@ -17,11 +17,11 @@ services:
       - PGDATA=/var/lib/postgresql/data
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=1111
-      - POSTGRES_DB=success-bot
+      - POSTGRES_DB=demo-success-bot
     ports:
-      - 5432:5432 
+      - 5435:5432 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d success-bot"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d demo-success-bot"]
       interval: 10s
       retries: 5
       start_period: 30s
