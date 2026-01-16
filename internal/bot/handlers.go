@@ -723,7 +723,7 @@ func (b *Bot) inputCountToSell(c telebot.Context) error {
 	user.Metadata.InstrumentTicker = ""
 	user.Metadata.InstrumentOperation = ""
 
-	if err := c.Send(text); err != nil {
+	if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
 		return errs.NewStack(fmt.Errorf("failed to send message: %v", err))
 	}
 

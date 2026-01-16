@@ -207,8 +207,8 @@ func (pr *portfolioRepository) SellInstrument(ctx context.Context, userID, instr
 	if currentCount > 0 {
 		count := min(remainsCount, currentCount)
 
-		// balanceDiff := buyAmount + 0,3% fee for selling
-		balanceDiff := float64(count)*(price-avgPrice) - float64(count)*price*0.003
+		// balanceDiff := sellAmount - 0,3% fee for selling
+		balanceDiff := float64(count)*price - float64(count)*price*0.003
 
 		query = `UPDATE success_bot.users
 			SET available_balance = available_balance + $1
