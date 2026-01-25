@@ -387,7 +387,10 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 			default:
 				instrumentPrices, err := b.deps.finam.GetInstrumentPrices(b.ctx, ticker)
 				if err != nil {
-					log.Error("failed to get instrument info", zap.String("username", user.Username), zap.Error(err))
+					log.Error(
+						"failed to get instrument prices from finam", zap.String("username", user.Username), zap.Error(err),
+					)
+					continue
 				}
 
 				// Skip if price didn't change
@@ -525,7 +528,11 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 			top3Balance = b.topUsers[2].TotalBalance
 
 			for i := 3; i < min(domain.UsersPerPage, len(b.topUsers)); i++ {
-				usersList += fmt.Sprintf("\n%d. %s %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].TotalBalance)
+				usersList += fmt.Sprintf("\n%d. %s %s L$",
+					i+1,
+					b.topUsers[i].Username,
+					format.PrettyNumber(b.topUsers[i].TotalBalance, " ", ",", false),
+				)
 			}
 
 			b.mu.RUnlock()
@@ -544,7 +551,11 @@ func (b *Bot) topUsersHandler(c telebot.Context) error {
 		})
 	} else {
 		for i := domain.UsersPerPage * (currentPage - 1); i < min(domain.UsersPerPage*currentPage, int64(len(b.topUsers))); i++ {
-			usersList += fmt.Sprintf("\n%d. %s %.2f L$", i+1, b.topUsers[i].Username, b.topUsers[i].TotalBalance)
+			usersList += fmt.Sprintf("\n%d. %s %s L$",
+				i+1,
+				b.topUsers[i].Username,
+				format.PrettyNumber(b.topUsers[i].TotalBalance, " ", ",", false),
+			)
 		}
 		b.mu.RUnlock()
 
