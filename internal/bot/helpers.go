@@ -254,6 +254,10 @@ func (b *Bot) setupDailyProcessor() {
 }
 
 func (b *Bot) closeInstrument(c telebot.Context, user *domain.User) error {
+	if user.Metadata.InstrumentDone == nil {
+		return nil
+	}
+
 	close(*user.Metadata.InstrumentDone)
 	user.Metadata.InstrumentDone = nil
 

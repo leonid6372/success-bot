@@ -40,7 +40,7 @@ func (b *Bot) startHandler(c telebot.Context) error {
 	ctx := c.Get(ctxContext).(context.Context)
 	user := b.mustUser(c)
 
-	if user != nil && user.Metadata.InstrumentDone != nil {
+	if user != nil {
 		if err := b.closeInstrument(c, user); err != nil {
 			return errs.NewStack(err)
 		}
@@ -74,10 +74,8 @@ func (b *Bot) selectLanguageHandler(c telebot.Context) error {
 		return errs.NewStack(fmt.Errorf("user not found in cache"))
 	}
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	text := b.deps.dictionary.Text(dictionary.DefaultLanguage, msgLanguage)
@@ -94,10 +92,8 @@ func (b *Bot) selectLanguageHandler(c telebot.Context) error {
 func (b *Bot) startMsg(c telebot.Context) error {
 	user := b.mustUser(c)
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	text := b.deps.dictionary.Text(user.LanguageCode, msgStart, map[string]any{
@@ -186,10 +182,8 @@ func (b *Bot) mainMenuHandler(c telebot.Context) error {
 	user.Metadata.InputType = ""
 	user.Metadata.InstrumentOperation = ""
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	text := b.deps.dictionary.Text(user.LanguageCode, msgMainMenu)
@@ -212,10 +206,8 @@ func (b *Bot) portfolioHandler(c telebot.Context) error {
 	user.Metadata.InputType = ""
 	user.Metadata.InstrumentOperation = ""
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	currentPage, err := b.getCurrentPage(c)
@@ -291,10 +283,8 @@ func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 	user.Metadata.InputType = ""
 	user.Metadata.InstrumentOperation = ""
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	currentPage, err := b.getCurrentPage(c)
@@ -340,10 +330,8 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 	user.Metadata.InputType = ""
 	user.Metadata.InstrumentOperation = ""
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	args := c.Args()
@@ -362,20 +350,48 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 	doneCh := make(chan struct{})
 	user.Metadata.InstrumentDone = &doneCh
 
-	go func(user *domain.User) {
+	go func(c telebot.Context, user *domain.User) {
+		defer func() {
+			if err := b.closeInstrument(c, user); err != nil {
+				log.Error("failed to close instrument", zap.String("username", user.Username), zap.Error(err))
+			}
+		}()
+
+		ctx, cancel := context.WithTimeout(b.ctx, 5*time.Minute)
+		defer cancel()
+
+		instrumentPrices, err := b.deps.finam.GetInstrumentPrices(b.ctx, ticker)
+		if err != nil {
+			log.Error(
+				"failed to get instrument prices from finam", zap.String("username", user.Username), zap.Error(err),
+			)
+			return
+		}
+
+		user.Metadata.InstrumentTicker = ticker
+		user.Metadata.InstrumentBuyPrice = instrumentPrices.Ask
+		user.Metadata.InstrumentSellPrice = instrumentPrices.Bid
+
+		markup := b.instrumentKeyboard(user.LanguageCode)
+
 		text := b.deps.dictionary.Text(user.LanguageCode, msgInstrument, map[string]any{
 			"InstrumentName":   instrument.Name,
 			"InstrumentTicker": instrument.Ticker[:strings.Index(instrument.Ticker, "@")],
 		})
 
-		if err := c.Send(text, &telebot.SendOptions{ParseMode: telebot.ModeHTML}); err != nil {
+		if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup, ParseMode: telebot.ModeHTML}); err != nil {
 			log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
 			return
 		}
 
 		var prevPrice float64
 
-		user.Metadata.InstrumentTicker = ticker
+		text = b.deps.dictionary.Text(user.LanguageCode, msgLastPricePlug)
+
+		msg, err := b.Telebot.Send(c.Recipient(), text)
+		if err != nil {
+			log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
+		}
 
 		for {
 			time.Sleep(2 * time.Second)
@@ -384,6 +400,10 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 			select {
 			case <-doneCh:
 				return
+
+			case <-ctx.Done():
+				return
+
 			default:
 				instrumentPrices, err := b.deps.finam.GetInstrumentPrices(b.ctx, ticker)
 				if err != nil {
@@ -418,10 +438,6 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 						log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
 					}
 
-					if err := b.closeInstrument(c, user); err != nil {
-						log.Error("failed to close instrument", zap.String("username", user.Username), zap.Error(err))
-					}
-
 					return
 				}
 
@@ -430,14 +446,13 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 				user.Metadata.InstrumentBuyPrice = instrumentPrices.Ask
 				user.Metadata.InstrumentSellPrice = instrumentPrices.Bid
 
-				markup := b.instrumentKeyboard(user.LanguageCode)
-
-				if err := c.Send(text, &telebot.SendOptions{ReplyMarkup: markup}); err != nil {
-					log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
+				_, err = b.Telebot.Edit(msg, text)
+				if err != nil {
+					log.Error("failed to edit message", zap.String("username", user.Username), zap.Error(err))
 				}
 			}
 		}
-	}(user)
+	}(c, user)
 
 	return nil
 }
@@ -893,10 +908,8 @@ func (b *Bot) buyHandler(c telebot.Context) error {
 		return errs.NewStack(boterrs.ErrEmptyTickerToBuy)
 	}
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	user.Metadata.InputType = domain.InputTypeCount
@@ -928,10 +941,8 @@ func (b *Bot) sellHandler(c telebot.Context) error {
 		return errs.NewStack(boterrs.ErrEmptyTickerToSell)
 	}
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	user.Metadata.InputType = domain.InputTypeCount
@@ -962,10 +973,8 @@ func (b *Bot) dailyRewardHandler(c telebot.Context) error {
 	user.Metadata.InputType = ""
 	user.Metadata.InstrumentOperation = ""
 
-	if user.Metadata.InstrumentDone != nil {
-		if err := b.closeInstrument(c, user); err != nil {
-			return errs.NewStack(err)
-		}
+	if err := b.closeInstrument(c, user); err != nil {
+		return errs.NewStack(err)
 	}
 
 	// update postgres data

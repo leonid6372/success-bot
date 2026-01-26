@@ -20,6 +20,7 @@ const (
 	msgMainMenu             = "main_menu"
 	msgInstrumentsList      = "instruments_list"
 	msgInstrument           = "instrument"
+	msgLastPricePlug        = "last_price_plug"
 	msgLastPrice            = "last_price"
 	msgInstrumentExit       = "instrument_exit"
 	msgFAQ                  = "faq"
