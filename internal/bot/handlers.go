@@ -323,6 +323,8 @@ func (b *Bot) instrumentsListHandler(c telebot.Context) error {
 }
 
 func (b *Bot) instrumentHandler(c telebot.Context) error {
+	defer c.Respond()
+
 	user := b.mustUser(c)
 
 	user.Metadata.InputType = ""
@@ -386,7 +388,7 @@ func (b *Bot) instrumentHandler(c telebot.Context) error {
 
 		text = b.deps.dictionary.Text(user.LanguageCode, msgLastPricePlug)
 
-		msg, err := b.Telebot.Send(c.Recipient(), "Здесь будет цена")
+		msg, err := b.Telebot.Send(c.Recipient(), text)
 		if err != nil {
 			log.Error("failed to send message", zap.String("username", user.Username), zap.Error(err))
 		}
