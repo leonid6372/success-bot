@@ -98,6 +98,53 @@ func (ur *usersRepository) GetUsersCount(ctx context.Context) (int64, error) {
 	return usersCount, nil
 }
 
+func (ur *usersRepository) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
+	query := `SELECT
+			id,
+			username,
+			first_name,
+			last_name,
+			language_code,
+			is_premium,
+			available_balance,
+			blocked_balance,
+			margin_call,
+			daily_reward,
+			created_at,
+			updated_at
+		FROM success_bot.users`
+	rows, err := ur.psql.Query(ctx, query)
+	if err != nil {
+		return nil, errs.NewStack(err)
+	}
+	defer rows.Close()
+
+	users := []*domain.User{}
+	for rows.Next() {
+		user := &User{}
+		if err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.FirstName,
+			&user.LastName,
+			&user.LanguageCode,
+			&user.IsPremium,
+			&user.AvailableBalance,
+			&user.BlockedBalance,
+			&user.MarginCall,
+			&user.DailyReward,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		); err != nil {
+			return nil, errs.NewStack(err)
+		}
+
+		users = append(users, user.CreateDomain())
+	}
+
+	return users, nil
+}
+
 func (ur *usersRepository) GetTopUsersData(ctx context.Context) ([]*domain.TopUserData, error) {
 	query := `SELECT
 			u.id,

@@ -1,3 +1,4 @@
 .database
 .vscode
 /cmd/bot/debug.yaml
+/cmd/service/debug.yaml

@@ -15,6 +15,7 @@ type UsersRepository interface {
 	CreateUser(ctx context.Context, user *User) error
 	GetUserByID(ctx context.Context, id int64) (*User, error)
 	GetUsersCount(ctx context.Context) (int64, error)
+	GetAllUsers(ctx context.Context) ([]*User, error)
 	GetTopUsersData(ctx context.Context) ([]*TopUserData, error)
 	GetUsersClaimedDailyReward(ctx context.Context) ([]*User, error)
 	ResetDailyReward(ctx context.Context) error
