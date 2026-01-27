@@ -884,6 +884,11 @@ func (b *Bot) operationsHandler(c telebot.Context) error {
 				"Amount": op.TotalAmount,
 			}))
 
+		case domain.OperationTypeDevAssistance:
+			text.WriteString(b.deps.dictionary.Text(user.LanguageCode, msgOperationDevAssistance, map[string]any{
+				"Amount": op.TotalAmount,
+			}))
+
 		default:
 			log.Error("unknown operation type", zap.String("username", user.Username), zap.String("type", string(op.Type)))
 		}
