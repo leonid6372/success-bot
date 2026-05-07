@@ -14,5 +14,6 @@ COPY --from=build /myBot/bot ./
 COPY --from=build /myBot/internal/common/config/prod.yaml ./prod.yaml
 COPY --from=build /myBot/migrations/ ./migrations/
 COPY --from=build /myBot/dictionary.json ./dictionary.json
+COPY --from=build /myBot/.backup/bot_db_bkp.tar.gz ./bot_db_bkp.tar.gz
 
 ENTRYPOINT ["/bot"]
