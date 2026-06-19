@@ -1,10 +1,8 @@
-# ТГ-бот является демо-счетом для инвестиций с актуальными данными МосБиржи
+# TG-bot is a demo account for investments with up-to-date data from the Moscow Exchange
 
-Бот позволяет имитировать покупки и продажи акций, торгующихся на МосБирже. Открывать короткие и длинные позиции. Внутри реализованы:
-- Кэши для хранения данных пользователей, которые сейчас онлайн, и данных об актуальных котировках акций задействованных пользователями;
-- Словарь фраз со встроенным форматированием для русского и английского языков;
-- Возможность доступа для пользователей с условием подписки на ТГ-канал.
+The bot allows you to simulate the purchase and sale of shares traded on the Moscow Exchange. You can open short and long positions. The bot includes the following features:
+- Caches for storing user data that is currently online and data about the current stock quotes used by users;
+- A dictionary of phrases with built-in formatting for both Russian and English;
+- Access for users who subscribe to the Telegram channel.
 
-В архитектуре соблюдены приницпы Clean architecture и Dependency injection.
-
-p.s. для сохранения консистентности данных в БД делать деплой на прод в промежутке 08:00-23:45 МСК
+The architecture follows the principles of clean architecture and dependency injection.
